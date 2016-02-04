@@ -161,6 +161,7 @@ enum { DRCHG_SET, DRCHG_NOJACC, DRCHG_NOACK, DRCHG_NOADRACK, DRCHG_NWKCMD };
 enum { KEEP_TXPOWADJ = -128 };
 
 
+#if !defined(DISABLE_CLASSB)
 //! \internal
 typedef struct {
     u1_t     dr;
@@ -171,7 +172,6 @@ typedef struct {
     ostime_t rxtime;    // start of next spot
     u4_t     freq;
 } rxsched_t;
-
 
 //! Parsing and tracking states of beacons.
 enum { BCN_NONE    = 0x00,   //!< No beacon received
@@ -191,6 +191,8 @@ typedef struct {
     s4_t     lat;     //!< Lat field of last beacon (valid only if BCN_FULL set)
     s4_t     lon;     //!< Lon field of last beacon (valid only if BCN_FULL set)
 } bcninfo_t;
+#endif
+
 
 // purpose of receive window - lmic_t.rxState
 enum { RADIO_RST=0, RADIO_TX=1, RADIO_RX=2, RADIO_RXON=3, RADIO_TXCW, RADIO_CCA };
@@ -381,11 +383,13 @@ struct lmic_t {
     u1_t        opts;         // negotiated protocol options
 #endif
 
+#if !defined(DISABLE_CLASSB)
     // Class B state
     u1_t        missedBcns;   // unable to track last N beacons
     s1_t        askForTime;   // how often to ask for time
     //XXX:old: u1_t        pingSetAns;   // answer set cmd and ACK bits
     rxsched_t   ping;         // pingable setup
+#endif
 
     // Public part of MAC state
     u1_t        txCnt;
@@ -394,12 +398,14 @@ struct lmic_t {
     u1_t        dataLen;    // 0 no data or zero length data, >0 byte count of data
     u1_t        frame[MAX_LEN_FRAME];
 
+#if !defined(DISABLE_CLASSB)
     u1_t        bcnfAns;      // mcmd beacon freq: bit7:pending, bit0:ACK/NACK
     u1_t        bcnChnl;
     u4_t        bcnFreq;      // 0=default, !=0: specific BCN freq/no hopping
     u1_t        bcnRxsyms;    //
     ostime_t    bcnRxtime;
     bcninfo_t   bcninfo;      // Last received beacon info
+#endif
 
     u1_t        noRXIQinversion;
 
@@ -439,16 +445,22 @@ void  LMIC_setTxData    (void);
 int   LMIC_setTxData2   (u1_t port, u1_t* data, u1_t dlen, u1_t confirmed);
 void  LMIC_sendAlive    (void);
 
+#if !defined(DISABLE_CLASSB)
 u1_t  LMIC_enableTracking  (u1_t tryBcnInfo);
 void  LMIC_disableTracking (void);
+#endif
 
 void  LMIC_setClassC     (u1_t enabled);
+#if !defined(DISABLE_CLASSB)
 void  LMIC_stopPingable  (void);
 u1_t  LMIC_setPingable   (u1_t intvExp);
+#endif
 void  LMIC_tryRejoin     (void);
 
+#if !defined(DISABLE_CLASSB)
 int  LMIC_scan (ostime_t timeout);
 int  LMIC_track (ostime_t when);
+#endif
 void LMIC_setMultiCastSession (devaddr_t grpaddr, const u1_t* nwkKeyDn, const u1_t* appKey, u4_t seqnoAdn);
 
 void LMIC_setSession (u4_t netid, devaddr_t devaddr, const u1_t* nwkKey,

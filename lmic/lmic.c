@@ -562,6 +562,7 @@ static ostime_t dr2hsym (dr_t dr, s1_t num) {
     return us2osticks(us);
 }
 
+#if !defined(DISABLE_CLASSB)
 static ostime_t calcRxWindow (u1_t secs, dr_t dr) {
     ostime_t rxoff, err;
 
@@ -605,6 +606,7 @@ static void calcBcnRxWindowFromMillis (u1_t ms, bit_t ini) {
     LMIC.bcnRxsyms = wsyms;
     LMIC.bcnRxtime = LMIC.bcninfo.txtime + BCN_INTV_osticks + cpre - whspan;
 }
+#endif
 
 static void iniRxdErr () {
     // Avg(rxdErrs) == 0
@@ -656,6 +658,7 @@ static void adjustByRxdErr (u1_t rxdelay, u1_t dr) {
 }
 
 
+#if !defined(DISABLE_CLASSB)
 // Setup scheduled RX window (ping/multicast slot)
 static void rxschedInit (rxsched_t* rxsched) {
     // Relates to the standard in the following way:
@@ -694,6 +697,7 @@ static bit_t rxschedNext (rxsched_t* rxsched, ostime_t cando) {
     rxsched->rxsyms = LMIC.rxsyms;
     goto again;
 }
+#endif
 
 
 static ostime_t rndDelay (u1_t secSpan) {
@@ -731,6 +735,7 @@ static void setDrTxpow (u1_t reason, dr_t dr, s1_t powadj) {
 }
 
 
+#if !defined(DISABLE_CLASSB)
 void LMIC_stopPingable (void) {
     LMIC.opmode &= ~(OP_PINGABLE|OP_PINGINI);
 }
@@ -752,6 +757,7 @@ u1_t LMIC_setPingable (u1_t intvExp) {
     LMIC_enableTracking(3);
     return 2;
 }
+#endif
 
 
 static u1_t selectRandomChnl (u2_t map, u1_t nbits) {
@@ -1029,11 +1035,13 @@ again:
     return (ostime_t) txavail;
 }
 
+#if !defined(DISABLE_CLASSB)
 static void setBcnRxParams_dyn (void) {
     LMIC.dataLen = 0;
     LMIC.freq = LMIC.bcnFreq ? LMIC.bcnFreq : REGION.beaconFreq;
     LMIC.rps  = setIh(setNocrc(dndr2rps(REGION.beaconDr), 1), REGION.beaconLen);
 }
+#endif
 
 #endif // REG_DYN
 
@@ -1290,6 +1298,7 @@ static void syncDatarate_fix () {
                KEEP_TXPOWADJ);
 }
 
+#if !defined(DISABLE_CLASSB)
 static void setBcnRxParams_fix (void) {
     LMIC.dataLen = 0;
     LMIC.rps  = setIh(setNocrc(dndr2rps(REGION.beaconDr),1),REGION.beaconLen);
@@ -1302,6 +1311,7 @@ static void setBcnRxParams_fix (void) {
     // US915/AU915
     LMIC.freq = (LMIC.bcnFreq ? LMIC.bcnFreq : REGION.baseFreqDn + LMIC.bcnChnl * DNCHSPACING_500kHz);
 }
+#endif
 
 static ostime_t nextTx_fix (ostime_t now) {
     if( LMIC.datarate == REGION.fixDr ) {
@@ -1378,11 +1388,13 @@ static void stateJustJoined (void) {
     LMIC.dn2Freq     = REGION.rx2Freq;
     LMIC.gwmargin    = 0;
     LMIC.gwcnt       = 0;
+#if !defined(DISABLE_CLASSB)
     LMIC.bcnfAns     = 0;
     LMIC.bcnChnl     = 0;
     LMIC.bcnFreq     = 0;
     LMIC.ping.freq   = REGION.pingFreq;
     LMIC.ping.dr     = REGION.pingDr;
+#endif
 #if defined(CFG_lorawan11)
     if( (LMIC.opts &= OPT_LORAWAN11) ) {
         LMIC.opts |= OPT_OPTNEG;
@@ -1395,6 +1407,7 @@ static void stateJustJoined (void) {
 // Decoding frames
 
 
+#if !defined(DISABLE_CLASSB)
 // Decode beacon  - do not overwrite bcninfo unless we have a match!
 static int decodeBeacon (void) {
     u1_t* d = LMIC.frame;
@@ -1419,6 +1432,7 @@ static int decodeBeacon (void) {
     LMIC.bcninfo.flags |= BCN_FULL;
     return 2;
 }
+#endif
 
 
 static bit_t decodeFrame (void) {
@@ -1711,6 +1725,7 @@ static bit_t decodeFrame (void) {
             oidx += 2;
             continue;
         }
+#if !defined(DISABLE_CLASSB)
         case MCMD_PITV_ANS: {
             if( (LMIC.ping.intvExp & 0x80) ) {
                 LMIC.ping.intvExp &= 0x7F;   // clear pending bit
@@ -1786,6 +1801,7 @@ static bit_t decodeFrame (void) {
             oidx += 4;
             continue;
         }
+#endif
         case MCMD_ADRP_REQ: {
             LMIC_setLinkCheck(1 << (opts[oidx+1] >> 4), 1 << (opts[oidx+1] & 0xf));
             LMIC.foptsUp[LMIC.foptsUpLen++] = MCMD_ADRP_ANS;
@@ -1847,7 +1863,7 @@ static bit_t decodeFrame (void) {
     return 1;
 }
 
-
+#if !defined(DISABLE_CLASSB)
 static int decodeMultiCastFrame (void) {
     u1_t* d = LMIC.frame;
     u1_t hdr    = d[0];
@@ -1925,6 +1941,7 @@ static int decodeMultiCastFrame (void) {
     }
     return 1;
 }
+#endif
 
 
 // ================================================================================
@@ -1968,10 +1985,12 @@ static void setupRx1 (osjobcb_t func) {
 
 // Called by HAL once TX complete and delivers exact end of TX time stamp in LMIC.rxtime
 static void txDone (u1_t delay, osjobcb_t func) {
+#if !defined(DISABLE_CLASSB)
     if( (LMIC.opmode & (OP_TRACK|OP_PINGABLE|OP_PINGINI)) == (OP_TRACK|OP_PINGABLE) ) {
         rxschedInit(&LMIC.ping);    // note: reuses LMIC.frame buffer!
         LMIC.opmode |= OP_PINGINI;
     }
+#endif
     prepareDn();
     LMIC.rps  = dndr2rps(LMIC.dndr);
 
@@ -2237,12 +2256,14 @@ static void buildDataFrame (void) {
             end += n;
         }
     }
+#if !defined(DISABLE_CLASSB)
     if( LMIC.ping.intvExp & 0x80 ) {
         // Announce ping interval - LNS hasn't acked it yet
         LMIC.frame[end] = MCMD_PITV_REQ;
         LMIC.frame[end+1] = LMIC.ping.intvExp & 0x7;
         end += 2;
     }
+#endif
     if( LMIC.dutyCapAns ) {
         if( end <= OFF_DAT_OPTS + 15 - 1 )
             LMIC.frame[end] = MCMD_DCAP_ANS;
@@ -2283,6 +2304,7 @@ static void buildDataFrame (void) {
         LMIC.devsAns = 0;
         end += 3;
     }
+#if !defined(DISABLE_CLASSB)
     if( LMIC.askForTime > 0 ) {
         LMIC.frame[end] = MCMD_TIME_REQ;
         end += 1;
@@ -2293,6 +2315,7 @@ static void buildDataFrame (void) {
         LMIC.bcnfAns = 0;
         end += 2;
     }
+#endif
     if( LMIC.gwmargin == 255 ) {
         LMIC.frame[end] = MCMD_LCHK_REQ;
         end += 1;
@@ -2337,6 +2360,7 @@ static void buildDataFrame (void) {
 }
 
 
+#if !defined(DISABLE_CLASSB)
 // Callback from HAL during scan mode or when job timer expires.
 static void onBcnScanRx (osjob_t* job) {
     // stop radio and its job
@@ -2482,6 +2506,7 @@ int LMIC_track (ostime_t when) {
     os_setTimedCallback(&LMIC.osjob, LMIC.rxtime - RX_RAMPUP, track_start);
     return 1;
 }
+#endif
 
 
 // ================================================================================
@@ -2536,6 +2561,7 @@ bit_t LMIC_startJoining (void) {
 //
 // ================================================================================
 
+#if !defined(DISABLE_CLASSB)
 static void processPingRx (osjob_t* osjob) {
     if( LMIC.dataLen != 0 ) {
         LMIC.txrxFlags = TXRX_PING;
@@ -2547,6 +2573,7 @@ static void processPingRx (osjob_t* osjob) {
     // Pick next ping slot
     engineUpdate();
 }
+#endif
 
 
 static bit_t processDnData (void) {
@@ -2603,6 +2630,7 @@ static bit_t processDnData (void) {
             LMIC.adrAckReq = 0;
             reportEvent((LMIC.opmode & OP_LINKDEAD) ? EV_LINK_DEAD : EV_ADR_BACKOFF);
         }
+#if !defined(DISABLE_CLASSB)
         // If this falls to zero the NWK did not answer our MCMD_TIME_REQ commands - try full scan
         if( LMIC.askForTime > 0 ) {
             if( --LMIC.askForTime == 0 ) {
@@ -2613,6 +2641,7 @@ static bit_t processDnData (void) {
                 opmodePoll();
             }
         }
+#endif
       txcontinue:
         LMIC.opmode &= ~OP_TXRXPEND;
         return 1;
@@ -2631,6 +2660,7 @@ static bit_t processDnData (void) {
 }
 
 
+#if !defined(DISABLE_CLASSB)
 static void processBeacon (osjob_t* osjob) {
     ostime_t lasttx = LMIC.bcninfo.txtime;   // save previous - decodeBeacon overwrites
     u1_t flags = LMIC.bcninfo.flags;
@@ -2684,7 +2714,6 @@ static void processBeacon (osjob_t* osjob) {
     reportEvent(ev);
 }
 
-
 static void startRxBcn (osjob_t* osjob) {
     LMIC.osjob.func = FUNC_ADDR(processBeacon);
     os_radio(RADIO_RX);
@@ -2695,6 +2724,8 @@ static void startRxPing (osjob_t* osjob) {
     LMIC.osjob.func = FUNC_ADDR(processPingRx);
     os_radio(RADIO_RX);
 }
+#endif
+
 
 
 // Decide what to do next for the MAC layer of a device
@@ -2715,6 +2746,7 @@ static void engineUpdate (void) {
     ostime_t rxtime = 0;
     ostime_t txbeg  = 0;
 
+#if !defined(DISABLE_CLASSB)
     if( (LMIC.opmode & OP_SCAN) != 0 ) {
         // Looking for a beacon - LMIC.bcninfo.txtime is timeout for scan
         // Cancel onging TX/RX transaction
@@ -2741,6 +2773,7 @@ static void engineUpdate (void) {
         ASSERT( (ostime_t)(rxtime-now) >= 0 );
 #endif
     }
+#endif
     if( LMIC.pollcnt )
         opmodePoll();
 
@@ -2758,6 +2791,7 @@ static void engineUpdate (void) {
         // Delayed TX or waiting for duty cycle?
         if( (LMIC.globalDutyRate != 0 || (LMIC.opmode & OP_RNDTX) != 0)  &&  (txbeg - LMIC.globalDutyAvail) < 0 )
             txbeg = LMIC.globalDutyAvail;
+#if !defined(DISABLE_CLASSB)
         // If we're tracking a beacon...
         // then make sure TX-RX transaction is complete before beacon
         if( (LMIC.opmode & OP_TRACK) != 0 &&
@@ -2768,6 +2802,7 @@ static void engineUpdate (void) {
             txbeg = 0;
             goto checkrx;
         }
+#endif
         // Earliest possible time vs overhead to setup radio
         if( txbeg - (now + TX_RAMPUP) <= 0 ) {
             // We could send right now!
@@ -2826,6 +2861,7 @@ static void engineUpdate (void) {
         }
     }
 
+#if !defined(DISABLE_CLASSB)
     // Are we pingable?
   checkrx:
     if( (LMIC.opmode & OP_PINGINI) != 0 ) {
@@ -2858,6 +2894,7 @@ static void engineUpdate (void) {
     }
     os_setTimedCallback(&LMIC.osjob, rxtime, FUNC_ADDR(startRxBcn));
     return;
+#endif
 
   txdelay:
     if( (LMIC.clmode & CLASS_C) ) {
@@ -2913,9 +2950,11 @@ void LMIC_reset_ex (u1_t regionCode) {
     LMIC.dn1Dly       = 1;
     LMIC.dn2Dr        = REGION.rx2Dr;    // we need this for 2nd DN window of join accept
     LMIC.dn2Freq      = REGION.rx2Freq;  // ditto
+#if !defined(DISABLE_CLASSB)
     LMIC.ping.freq    = REGION.pingFreq; // defaults for ping
     LMIC.ping.dr      = REGION.pingDr;   // ditto
     LMIC.ping.intvExp = 8;               // no ping interval ever sent up
+#endif
     LMIC.refChnl      = REG_IS_FIX() ? 0 : os_getRndU1();  // fix uses randomized hoplist starting with block0
     LMIC.adrAckLimit  = ADR_ACK_LIMIT;
     LMIC.adrAckDelay  = ADR_ACK_DELAY;
@@ -3182,7 +3221,9 @@ static const rfuncs_t RFUNCS_DYN = {
     __dyn(syncDatarate),
     __dyn(updateTx),
     __dyn(nextTx),
+#if !defined(DISABLE_CLASSB)
     __dyn(setBcnRxParams),
+#endif
 };
 #undef __dyn
 #endif // REG_DYN
@@ -3197,7 +3238,9 @@ static const rfuncs_t RFUNCS_FIX = {
     __fix(syncDatarate),
     __fix(updateTx),
     __fix(nextTx),
+#if !defined(DISABLE_CLASSB)
     __fix(setBcnRxParams),
+#endif
 };
 #undef __fix
 #endif // REG_FIX
