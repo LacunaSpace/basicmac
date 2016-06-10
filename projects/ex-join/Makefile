@@ -17,6 +17,7 @@ SVCS += app
 
 DEFS += -DDEBUG_RX
 DEFS += -DDEBUG_TX
+DEFS += -DUSE_IDEETRON_AES
 
 LMICCFG += eeprom_keys
 LMICCFG += DEBUG

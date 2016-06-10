@@ -14,6 +14,7 @@ include $(TOPDIR)/projects/platform.mk
 #TARGET ?= $(error "TARGET not specified (See platform.gmk for possible settings)")
 
 LMICDIR		:= $(TOPDIR)/lmic
+AESDIR		:= $(TOPDIR)/aes
 TOOLSDIR	:= $(TOPDIR)/tools
 COMMONDIR	:= $(TOPDIR)/common
 SVCSDIR		:= $(TOPDIR)/services
@@ -46,9 +47,9 @@ else
 PATCHFLAGS	+= -v
 endif
 
-SRCS		 = $(notdir $(wildcard $(LMICDIR)/*.c $(HALDIR)/*.c *.c $(HALDIR)/*.S))
+SRCS		 = $(notdir $(wildcard $(LMICDIR)/*.c $(AESDIR)/*.c $(HALDIR)/*.c *.c $(HALDIR)/*.S))
 
-VPATH		+= $(LMICDIR) $(HALDIR)
+VPATH		+= $(LMICDIR) $(AESDIR) $(HALDIR)
 
 ifneq ($(COMMON),)
     SRCS	+= $(COMMON)
