@@ -4,7 +4,9 @@
 // This file is subject to the terms and conditions defined in file 'LICENSE',
 // which is part of this source code package.
 
-#include "aes.h"
+#if defined(USE_ORIGINAL_AES)
+
+#include "../lmic/aes.h"
 
 
 // global area for passing parameters (aux, key) and for storing round keys
@@ -376,3 +378,5 @@ u4_t os_aes (u1_t mode, u1_t* buf, u2_t len) {
 #pragma GCC diagnostic pop
 
 #endif
+
+#endif // defined(USE_ORIGINAL_AES)
