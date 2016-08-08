@@ -119,6 +119,12 @@ void os_radio (u1_t mode) {
 
 	case RADIO_RX:
 	    radio_stop();
+#ifdef DEBUG_RX
+	    debug_printf("RX_MODE[freq=%.1F,sf=%d,bw=%s,rxtime=%.0F]\r\n",
+			 LMIC.freq, 6,
+			 getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
+			 LMIC.rxtime, 0);
+#endif
 	    // set timeout for rx operation (should not happen, might be updated by radio driver)
 	    radio_set_irq_timeout(LMIC.rxtime + ms2osticks(5) + LMIC_calcAirTime(LMIC.rps, 255) * 110 / 100);
 	    // receive frame at rxtime/now (wait for completion interrupt)
@@ -127,6 +133,11 @@ void os_radio (u1_t mode) {
 
 	case RADIO_RXON:
 	    radio_stop();
+#ifdef DEBUG_RX
+	    debug_printf("RXON_MODE[freq=%.1F,sf=%d,bw=%s]\r\n",
+			 LMIC.freq, 6,
+			 getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)));
+#endif
 	    // start scanning for frame now (wait for completion interrupt)
 	    radio_startrx(1);
 	    break;
