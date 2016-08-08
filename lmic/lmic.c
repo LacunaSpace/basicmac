@@ -1440,11 +1440,13 @@ static bit_t decodeFrame (void) {
     u1_t hdr    = d[0];
     u1_t ftype  = hdr & HDR_FTYPE;
     int  dlen   = LMIC.dataLen;
+    const char *window = (LMIC.txrxFlags & TXRX_DNW1) ? "RX1" : ((LMIC.txrxFlags & TXRX_DNW2) ? "RX2" : "Other");
     if( dlen < OFF_DAT_OPTS+4 ||
         (hdr & HDR_MAJOR) != HDR_MAJOR_V1 ||
         (ftype != HDR_FTYPE_DADN  &&  ftype != HDR_FTYPE_DCDN) ) {
         // Basic sanity checks failed
       norx:
+        debug_printf("Invalid downlink[window=%s]\r\n", window);
         LMIC.dataLen = 0;
         return 0;
     }
@@ -1860,6 +1862,7 @@ static bit_t decodeFrame (void) {
         LMIC.dataBeg = poff;
         LMIC.dataLen = pend-poff;
     }
+    debug_printf("Received downlink[window=%s,port=%d,ack=%d]\r\n", window, port, ackup);
     return 1;
 }
 
@@ -2089,6 +2092,7 @@ static bit_t processJoinAccept (void) {
                 s4_t freq = rdFreq(&LMIC.frame[dlen]);
                 if( freq > 0 ) {
                     setupChannel_dyn(chidx, freq, 0);
+                    debug_printf("Setup channel[idx=%d,freq=%.1F]\r\n", chidx, freq, 6);
                 }
             }
 #endif // REG_DYN
@@ -2730,6 +2734,7 @@ static void startRxPing (osjob_t* osjob) {
 
 // Decide what to do next for the MAC layer of a device
 static void engineUpdate (void) {
+    debug_printf("engineUpdate[opmode=0x%x]\r\n", LMIC.opmode);
     // Check for ongoing state: scan or TX/RX transaction
     if( (LMIC.opmode & (OP_NOENGINE|OP_TXRXPEND|OP_SHUTDOWN)) != 0 ) {
         return;
