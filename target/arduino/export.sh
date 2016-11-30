@@ -8,14 +8,24 @@ usage() {
 }
 
 
-CPOPTS=
+# This recursively copies $1 (file or directory) into $2 (directory)
+# This is essentially cp --symbolic-link, but POSIX-compatible.
+create_links() {
+	local TARGET=$(cd "$2" && pwd)
+	local SRCDIR=$(cd "$(dirname "$1")" && pwd)
+	local SRCNAME=$(basename "$1")
+	(cd "$SRCDIR" && find "$SRCNAME" -type d -exec mkdir -p "$TARGET/{}" \; -o -exec ln -s -v "$SRCDIR/{}" "$TARGET/{}" \; )
+}
+
+
+CMD="cp -r -v"
 case "$1" in
 	--help)
 		usage
 		exit 0
 	;;
 	--link)
-		CPOPTS=--symbolic-link
+		CMD="create_links"
 		shift;
 	;;
 	--*)
@@ -37,9 +47,13 @@ if ! [ -d "$(dirname "$TARGET")" ]; then
 fi
 
 mkdir -p "$TARGET"/src
-cp $CPOPTS -f -v "$SRC"/library.properties "$TARGET"
-cp $CPOPTS -f -v "$SRC"/lmic.h "$TARGET"/src
-cp $CPOPTS -r -f -v "$SRC"/../../lmic "$TARGET"/src
-cp $CPOPTS -r -f -v "$SRC"/../../aes "$TARGET"/src
-cp $CPOPTS -r -f -v "$SRC"/hal "$TARGET"/src
-cp $CPOPTS -r -f -v "$SRC"/examples "$TARGET"
+
+# This copies or links the relevant directories. For the hal and lmic
+# directories, the contained files are copied or linked, so that when
+# linking relative includes still work as expected
+$CMD "$SRC"/library.properties "$TARGET"
+$CMD "$SRC"/lmic.h "$TARGET"/src
+$CMD "$SRC"/../../lmic "$TARGET"/src
+$CMD "$SRC"/hal "$TARGET"/src
+$CMD "$SRC"/../../aes "$TARGET"/src
+$CMD "$SRC"/examples "$TARGET"
