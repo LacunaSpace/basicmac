@@ -53,12 +53,9 @@ void os_getArtEui (u1_t* buf) { }
 void os_getDevEui (u1_t* buf) { }
 void os_getDevKey (u1_t* buf) { }
 
-static uint8_t mydata[] = "Hello, world!";
-static osjob_t sendjob;
-
-// Schedule TX every this many seconds (might become longer due to duty
+// Schedule TX every this many milliseconds (might become longer due to duty
 // cycle limitations).
-const unsigned TX_INTERVAL = 60;
+const unsigned TX_INTERVAL = 60000;
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -108,8 +105,6 @@ void onEvent (ev_t ev) {
               Serial.println(LMIC.dataLen);
               Serial.println(F(" bytes of payload"));
             }
-            // Schedule next transmission
-            os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
             break;
         case EV_LOST_TSYNC:
             Serial.println(F("EV_LOST_TSYNC"));
@@ -133,28 +128,9 @@ void onEvent (ev_t ev) {
     }
 }
 
-void do_send(osjob_t* j){
-    // Check if there is not a current TX/RX job running
-    if (LMIC.opmode & OP_TXRXPEND) {
-        Serial.println(F("OP_TXRXPEND, not sending"));
-    } else {
-        // Prepare upstream data transmission at the next possible time.
-        LMIC_setTxData2(1, mydata, sizeof(mydata)-1, 0);
-        Serial.println(F("Packet queued"));
-    }
-    // Next TX is scheduled after TX_COMPLETE event.
-}
-
 void setup() {
     Serial.begin(115200);
     Serial.println(F("Starting"));
-
-    #ifdef VCC_ENABLE
-    // For Pinoccio Scout boards
-    pinMode(VCC_ENABLE, OUTPUT);
-    digitalWrite(VCC_ENABLE, HIGH);
-    delay(1000);
-    #endif
 
     // LMIC init
     os_init();
@@ -217,10 +193,34 @@ void setup() {
     // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
     LMIC_setDrTxpow(DR_SF7,14);
 
-    // Start job
-    do_send(&sendjob);
+    // Enable this to increase the receive window size, to compensate
+    // for an inaccurate clock.  // This compensate for +/- 10% clock
+    // error, a lower value will likely be more appropriate.
+    //LMIC_setClockError(MAX_CLOCK_ERROR * 10 / 100);
+
+    // Queue first packet
+    send_packet();
 }
 
+uint32_t last_packet = 0;
+
 void loop() {
+    // Let LMIC handle background tasks
     os_runloop_once();
+
+    // If TX_INTERVAL passed, *and* our previous packet is not still
+    // pending (which can happen due to duty cycle limitations), send
+    // the next packet.
+    if (millis() - last_packet > TX_INTERVAL && !(LMIC.opmode & (OP_JOINING|OP_TXRXPEND)))
+        send_packet();
 }
+
+void send_packet(){
+    // Prepare upstream data transmission at the next possible time.
+    uint8_t mydata[] = "Hello, world!";
+    LMIC_setTxData2(1, mydata, sizeof(mydata)-1, 0);
+    Serial.println(F("Packet queued"));
+
+    last_packet = millis();
+}
+
