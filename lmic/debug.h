@@ -13,6 +13,11 @@
 #define debug_printf(f,...)		do { } while (0)
 #define debug_str(s)			do { } while (0)
 #define debug_led(val)			do { } while (0)
+#define debug_verbose_printf(f,...)		do { } while (0)
+
+#ifdef CFG_DEBUG_VERBOSE
+#error CFG_DEBUG_VERBOSE requires CFG_DEBUG
+#endif
 
 #else
 
@@ -30,6 +35,12 @@ void debug_printf_pstr (char const *format, ...);
 
 // set LED state
 void debug_led (int val);
+
+#ifndef CFG_DEBUG_VERBOSE
+#define debug_verbose_printf(f,...)		do { } while (0)
+#else
+#define debug_verbose_printf debug_printf
+#endif
 
 #endif
 

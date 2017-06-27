@@ -944,6 +944,9 @@ static void updateTx_dyn (ostime_t txbeg) {
     if (LMIC.globalDutyRate != 0) {
         LMIC.globalDutyAvail = txbeg + (airtime << LMIC.globalDutyRate);
     }
+    debug_verbose_printf("Updating info for TX at %F, airtime will be %F, frequency %.2F. Setting available time for band %d to %u\r\n", txbeg, 0, airtime, 0, LMIC.freq, 6, b, LMIC.dyn.bandAvail[b]);
+    if( LMIC.globalDutyRate != 0 )
+        debug_verbose_printf("Updating global duty avail to %F\r\n", LMIC.globalDutyAvail, 0);
 }
 
 // select channel, perform LBT if required
@@ -968,6 +971,7 @@ again:
         osxtime_t avail = getAvail(LMIC.dyn.chAvail[chnl]);
         // check band DC availability
         osxtime_t bavail = getAvail(LMIC.dyn.bandAvail[LMIC.dyn.chUpFreq[chnl] & BAND_MASK]);
+        debug_verbose_printf("Considering channel %d, available at %F (in band %d available at %F)\r\n", chnl, (ostime_t)avail, 0, LMIC.dyn.chUpFreq[chnl] & BAND_MASK, (ostime_t)bavail, 0);
         if( LMIC.noDC )
             goto addch;
         if (REGION.flags & REG_PSA ) {
@@ -994,6 +998,7 @@ again:
         }
     }
     if (txavail == OSXTIME_MAX) {
+        debug_verbose_printf("No suitable channel found, trying different datarate\r\n");
         // No suitable channel found - maybe there's no channel which includes current datarate
         syncDatarate();
         drmap_t drbit2 = 1 << LMIC.datarate;
@@ -1003,6 +1008,7 @@ again:
     }
 
     if (cccnt) {
+        debug_verbose_printf("%d channels are available now\r\n", cccnt);
         while( cccnt ) {
             u1_t chnl = selectRandomChnl(ccmap, cccnt);
 
@@ -1015,12 +1021,14 @@ again:
                 LMIC.rssi = REGION.ccaThreshold;
                 os_radio(RADIO_CCA);
                 if (LMIC.rssi >= REGION.ccaThreshold) { // channel is not available
+                    debug_verbose_printf("Channel %d not available due to CCA\r\n", chnl);
                     goto unavailable;
                 }
             } else {
                 // channel decision is stable (i.e. won't change even if not used immediately)
                 LMIC.opmode &= ~OP_NEXTCHNL; // XXX - not sure if that's necessary, since we only consider channels that can be used NOW
             }
+            debug_verbose_printf("Selected channel %d (%.2F)\r\n", chnl, LMIC.dyn.chUpFreq[chnl] & ~BAND_MASK, 6);
             // good to go!
             LMIC.txChnl = chnl;
             return now;
@@ -1032,6 +1040,7 @@ again:
         txavail = os_getXTime() + ms2osticks(100);
     }
     // Earliest duty cycle expiry or earliest time a channel might be tested again
+    debug_verbose_printf("Channel(s) will become available at %F\r\n", (ostime_t)txavail, 0);
     return (ostime_t) txavail;
 }
 
@@ -1092,6 +1101,10 @@ static ostime_t nextJoinState (void) {
          // SF12:255, SF11:127, .., SF7:8secs
          : DNW2_SAFETY_ZONE+rndDelay(255>>LMIC.datarate));
 #endif
+    if (failed)
+        debug_verbose_printf("Join failed\r\n");
+    else
+        debug_verbose_printf("Scheduling next join at %F\r\n", LMIC.txend, 0);
     // 1 - triggers EV_JOIN_FAILED event
     return failed;
 }
@@ -1278,6 +1291,10 @@ static void updateTx_fix (ostime_t txbeg) {  //XXX:BUG: this is US915/AU915 cent
     if( LMIC.globalDutyRate != 0 ) {
         LMIC.globalDutyAvail = txbeg + (airtime<<LMIC.globalDutyRate);
     }
+
+    debug_verbose_printf("Updating info for TX at %F, airtime will be %F, frequency %.2F.\r\n", txbeg, 0 airtime, 0, LMIC.freq, 6);
+    if( LMIC.globalDutyRate != 0 )
+        debug_verbose_printf("Updating global duty avail to %F\r\n", LMIC.globalDutyAvail, 0);
 }
 
 static void syncDatarate_fix () {
@@ -2787,20 +2804,31 @@ static void engineUpdate (void) {
         // Need to TX some data...
         // Assuming txChnl points to channel which first becomes available again.
         bit_t jacc = ((LMIC.opmode & (OP_JOINING|OP_REJOIN)) != 0 ? 1 : 0);
+        if (jacc)
+            debug_verbose_printf("Uplink join pending\r\n", os_getTime());
+        else
+            debug_verbose_printf("Uplink data pending\r\n", os_getTime());
         // Find next suitable channel and return availability time
         if( (LMIC.opmode & OP_NEXTCHNL) != 0 ) {
             txbeg = LMIC.txend = nextTx(now);
+            debug_verbose_printf("Airtime available at %F (channel duty limit)\r\n", txbeg, 0);
         } else {
             txbeg = LMIC.txend;
+            debug_verbose_printf("Airtime available at %F (previously determined)\r\n", txbeg, 0);
         }
         // Delayed TX or waiting for duty cycle?
-        if( (LMIC.globalDutyRate != 0 || (LMIC.opmode & OP_RNDTX) != 0)  &&  (txbeg - LMIC.globalDutyAvail) < 0 )
+        if( (LMIC.globalDutyRate != 0 || (LMIC.opmode & OP_RNDTX) != 0)  &&  (txbeg - LMIC.globalDutyAvail) < 0 ) {
             txbeg = LMIC.globalDutyAvail;
+            debug_verbose_printf("Airtime available at %F (global duty limit)\r\n", txbeg, 0);
+        }
 #if !defined(DISABLE_CLASSB)
         // If we're tracking a beacon...
         // then make sure TX-RX transaction is complete before beacon
         if( (LMIC.opmode & OP_TRACK) != 0 &&
             txbeg + (jacc ? JOIN_GUARD_osticks : TXRX_GUARD_osticks) - rxtime > 0 ) {
+
+            debug_verbose_printf("Awaiting beacon before uplink\r\n");
+
             // Not enough time to complete TX-RX before beacon - postpone after beacon.
             // In order to avoid clustering of postponed TX right after beacon randomize start!
             txDelay(rxtime + BCN_RESERVE_osticks, 16);
@@ -2810,6 +2838,7 @@ static void engineUpdate (void) {
 #endif
         // Earliest possible time vs overhead to setup radio
         if( txbeg - (now + TX_RAMPUP) <= 0 ) {
+        debug_verbose_printf("Ready for uplink\r\n");
             // We could send right now!
             txbeg = now;
             dr_t txdr = LMIC.datarate;
@@ -2850,6 +2879,7 @@ static void engineUpdate (void) {
             os_radio(RADIO_TX);
             return;
         }
+        debug_verbose_printf("Uplink delayed until %F\r\n", txbeg, 0);
         // Cannot yet TX
         if( (LMIC.opmode & OP_TRACK) == 0 )
             goto txdelay; // We don't track the beacon - nothing else to do - so wait for the time to TX

@@ -110,6 +110,7 @@ void os_setExtendedTimedCallback (osxjob_t* xjob, osxtime_t xtime, osjobcb_t cb)
     xjob->deadline = xtime;
     extendedjobcb(xjob);
     hal_enableIRQs();
+    debug_verbose_printf("Scheduled job %u, cb %u at %F\r\n", (unsigned)xjob, (unsigned)cb, xtime, 0);
 }
 
 // clear scheduled job, return 1 if job was removed
@@ -117,6 +118,8 @@ int os_clearCallback (osjob_t* job) {
     hal_disableIRQs();
     int r = unlinkjob(&OS.scheduledjobs, job);
     hal_enableIRQs();
+    if (r)
+        debug_verbose_printf("Cleared job %u\r\n", (unsigned)job);
     return r;
 }
 
@@ -147,6 +150,10 @@ void os_setTimedCallbackEx (osjob_t* job, ostime_t time, osjobcb_t cb, unsigned 
     }
     *pnext = job;
     hal_enableIRQs();
+    if (flags & OSJOB_FLAG_NOW)
+        debug_verbose_printf("Scheduled job %u, cb %u ASAP\r\n", (unsigned)job, (unsigned)cb);
+    else
+        debug_verbose_printf("Scheduled job %u, cb %u%s at %s%F\r\n", (unsigned)job, (unsigned)cb, flags & OSJOB_FLAG_IRQDISABLED ? " (irq disabled)" : "", flags & OSJOB_FLAG_APPROX ? "approx " : "", time, 0);
 }
 
 // execute 1 job from timer or run queue, or sleep if nothing is pending
@@ -155,6 +162,7 @@ void os_runstep (void) {
     hal_disableIRQs();
     // check for runnable jobs
     if (OS.scheduledjobs) {
+        //debug_verbose_printf("Sleeping until job %u, cb %u, deadline %F\r\n", (unsigned)OS.scheduledjobs, (unsigned)OS.scheduledjobs->func, (ostime_t)OS.scheduledjobs->deadline);
 	if (hal_sleep(OS.exact ? HAL_SLEEP_EXACT : HAL_SLEEP_APPROX, OS.scheduledjobs->deadline) == 0) {
 	    j = OS.scheduledjobs;
 	    OS.scheduledjobs = j->next;
@@ -163,12 +171,14 @@ void os_runstep (void) {
 	    }
 	}
     } else { // nothing pending
+        //debug_verbose_printf("Sleeping forever\r\n");
 	hal_sleep(HAL_SLEEP_FOREVER, 0);
     }
     if( j == NULL || (j->flags & OSJOB_FLAG_IRQDISABLED) == 0) {
         hal_enableIRQs();
     }
     if (j) { // run job callback
+        debug_verbose_printf("Running job %u, cb %u, deadline %F\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline, 0);
 	hal_watchcount(30); // max 60 sec
 	j->func(j);
 	hal_watchcount(0);
