@@ -24,6 +24,8 @@
 // printf implementation).
 // Without this, assertion failures are *not* printed!
 #define CFG_DEBUG
+// When this is defined, additional debug output is printed.
+//#define CFG_DEBUG_VERBOSE
 // Debug output (and assertion failures) are printed to this Stream
 #define CFG_DEBUG_STREAM Serial
 // Define these to add some TX or RX specific debug output
