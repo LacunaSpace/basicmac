@@ -4,11 +4,11 @@
 // This file is subject to the terms and conditions defined in file 'LICENSE',
 // which is part of this source code package.
 
+#include "lmic.h"
+
 #ifdef CFG_DEBUG
 
 #include <stdarg.h>
-
-#include "lmic.h"
 
 void debug_led (int val) {
     hal_debug_led(val);

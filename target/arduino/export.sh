@@ -66,3 +66,5 @@ $CMD "$SRC"/../../lmic "$TARGET"/src
 $CMD "$SRC"/hal "$TARGET"/src
 $CMD "$SRC"/../../aes "$TARGET"/src
 $CMD "$SRC"/examples "$TARGET"
+$CMD "$SRC"/board.h "$TARGET"/src/lmic
+$CMD "$SRC"/hw.h "$TARGET"/src/lmic
