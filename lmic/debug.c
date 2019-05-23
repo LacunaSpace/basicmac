@@ -18,6 +18,11 @@ void debug_str (const char* str) {
     hal_debug_str(str);
 }
 
+static int debug_char(char c) {
+    char buf[2] = {c, 0};
+    hal_debug_str(buf);
+}
+
 static void btoa (char* buf, unsigned char b) {
     buf[0] = "0123456789ABCDEF"[b>>4];
     buf[1] = "0123456789ABCDEF"[b&0xF];
@@ -236,6 +241,179 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
     return dst - str - 1;
 }
 
+static char get_char(const char* pstr) {
+    return pgm_read_byte(pstr);
+}
+
+static int strpad_print (const char *str, int len, int width, int leftalign, char pad) {
+    if(len > width) {
+	width = len;
+    }
+    for(int i=0, npad=width-len; i<width; i++) {
+	debug_char((leftalign) ? ((i<len) ? str[i] : pad) : ((i<npad) ? pad : str[i-npad]));
+    }
+    return width;
+}
+
+static void debug_vprintf_pstr(const char *format, va_list arg) {
+    char c;
+    int width, left, base, zero, space, plus, prec, sign;
+
+    while( (c = get_char(format++))) {
+	if(c != '%') {
+	    debug_char(c);
+	} else {
+	    // flags
+	    width = prec = left = zero = sign = space = plus = 0;
+	    while( (c = get_char(format++)) ) {
+		if(c == '-') left = 1;
+		else if(c == ' ') space = 1;
+		else if(c == '+') plus = 1;
+		else if(c == '0') zero = 1;
+		else break;
+	    }
+	    // width
+	    if(c == '*') {
+		width = va_arg(arg, int);
+		c = get_char(format++);
+	    } else {
+		while(c >= '0' && c <= '9') {
+		    width = width*10 + c - '0';
+		    c = get_char(format++);
+		}
+	    }
+	    // precision
+	    if(c == '.') {
+		c = get_char(format++);
+		if(c == '*') {
+		    prec = va_arg(arg, int);
+		    c = get_char(format++);
+		} else {
+		    while(c >= '0' && c <= '9') {
+			prec = prec*10 + c - '0';
+			c = get_char(format++);
+		    }
+		}
+	    }
+	    // conversion specifiers
+	    switch(c) {
+		case 'c': // character
+		    c = va_arg(arg, int);
+		    // fallthrough
+		case '%': // percent literal
+		    debug_char(c);
+		    break;
+		case 's': { // nul-terminated string
+		    char *s = va_arg(arg, char *);
+		    int l = strlen(s);
+		    if(prec && l > prec) {
+			l = prec;
+		    }
+		    strpad_print(s, l, width, left, ' ');
+		    break;
+		}
+		case 'd': // signed integer as decimal
+		    sign = (plus) ? '+' : (space) ? ' ' : '-';
+		    // fallthrough
+		case 'u': // unsigned integer as decimal
+		    base = 10;
+		    goto numeric;
+		case 'x':
+		case 'X': // unsigned integer as hex
+		    base = 16;
+		    goto numeric;
+		case 'b': // unsigned integer as binary
+		    base = 2;
+		numeric: {
+			char num[33], pad = ' ';
+			if(zero && left==0 && prec==0) {
+			    prec = width - 1; // have itoa() do the leading zero-padding for correct placement of sign
+			    pad = '0';
+			}
+			int len = itoa(num, va_arg(arg, int), base, prec, 0, 0, sign);
+			strpad_print(num, len, width, left, pad);
+			break;
+		    }
+		case 'F': { // signed integer and exponent as fixed-point decimal
+		    char num[33], pad = (zero && left==0) ? '0' : ' ';
+		    int val = va_arg(arg, u4_t);
+		    int exp = va_arg(arg, int);
+		    int len = itoa(num, val, 10, exp+2, exp, (prec) ? prec : exp, (plus) ? '+' : (space) ? ' ' : '-');
+		    strpad_print(num, len, width, left, pad);
+		    break;
+		}
+		case 'e': { // LMIC event name
+		    int ev = va_arg(arg, int);
+		    const char *evn = (ev < sizeof(evnames)/sizeof(evnames[0]) && evnames[ev]) ? evnames[ev] : "UNKNOWN";
+		    strpad_print(evn, strlen(evn), width, left, ' ');
+		    break;
+		}
+		case 'E': // EUI64, lsbf (no field padding)
+		    {
+			unsigned char *eui = va_arg(arg, unsigned char *);
+			char out[24], *dst = out;
+			for(int i=7; i>=0; i--) {
+			    btoa(dst, eui[i]);
+			    dst += 2;
+			    if(i) *dst++ = '-';
+			}
+			*dst = 0;
+			debug_str(out);
+		    }
+		    break;
+		case 't': // ostime_t  (hh:mm:ss.mmm, no field padding)
+		case 'T': // osxtime_t (ddd.hh:mm:ss, no field padding)
+		    {
+			char out[13], *dst = out;
+			uint64_t t = ((c == 'T') ? va_arg(arg, uint64_t) : va_arg(arg, uint32_t)) * 1000 / OSTICKS_PER_SEC;
+			int ms = t % 1000;
+			t /= 1000;
+			int sec = t % 60;
+			t /= 60;
+			int min = t % 60;
+			t /= 60;
+			int hr = t % 24;
+			t /= 24;
+			int day = t;
+			if (c == 'T') {
+			    dst += itoa(dst, day, 10, 3, 0, 0, 0);
+			    *dst++ = '.';
+			}
+			dst += itoa(dst, hr, 10, 2, 0, 0, 0);
+			*dst++ = ':';
+			dst += itoa(dst, min, 10, 2, 0, 0, 0);
+			*dst++ = ':';
+			dst += itoa(dst, sec, 10, 2, 0, 0, 0);
+			if (c == 't') {
+			    *dst++ = '.';
+			    dst += itoa(dst, ms, 10, 3, 0, 0, 0);
+			}
+			*dst = 0;
+			debug_str(out);
+		    }
+		    break;
+		case 'h': { // buffer with length as hex dump (no field padding)
+		    unsigned char *buf = va_arg(arg, unsigned char *);
+		    int len = va_arg(arg, int);
+		    while(len--) {
+			char out[4], *dst = out;
+			btoa(dst, *buf++);
+			dst += 2;
+			if(space && len) *dst++ = ' ';
+			*dst = 0;
+			debug_str(out);
+		    }
+		    break;
+		}
+		default: // (also catch '\0')
+		    goto stop;
+	    }
+	}
+    }
+ stop:
+    ;
+}
+
 int debug_snprintf (char *str, int size, const char *format, ...) {
     va_list arg;
     int length;
@@ -246,7 +424,8 @@ int debug_snprintf (char *str, int size, const char *format, ...) {
     return length;
 }
 
-void debug_printf (char const *format, ...) {
+/*
+void debug_printf(char const *format, ...) {
     char buf[256];
     va_list arg;
 
@@ -254,6 +433,15 @@ void debug_printf (char const *format, ...) {
     debug_vsnprintf(buf, sizeof(buf), format, arg);
     va_end(arg);
     debug_str(buf);
+}
+*/
+
+void debug_printf_pstr (char const *format, ...) {
+    va_list arg;
+
+    va_start(arg, format);
+    debug_vprintf_pstr(format, arg);
+    va_end(arg);
 }
 
 #endif

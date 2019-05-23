@@ -16,14 +16,17 @@
 
 #else
 
+#include <avr/pgmspace.h>
+
 // write formatted string to buffer
-int debug_snprintf (char *str, int size, const char *format, ...);
+//int debug_snprintf (char *str, int size, const char *format, ...);
 
 // write formatted string to USART
-void debug_printf (char const *format, ...);
+void debug_printf_pstr (char const *format, ...);
+#define debug_printf(format, ...) debug_printf_pstr(PSTR(format), ## __VA_ARGS__)
 
 // write nul-terminated string to USART
-void debug_str (const char* str);
+//void debug_str (const char* str);
 
 // set LED state
 void debug_led (int val);
