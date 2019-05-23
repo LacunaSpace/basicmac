@@ -265,6 +265,52 @@ static int strpad_print_pstr (const char *str, int len, int width, int leftalign
     return width;
 }
 
+const char STR_EV_SCAN_TIMEOUT[] PROGMEM   = "SCAN_TIMEOUT";
+const char STR_EV_BEACON_FOUND[] PROGMEM   = "BEACON_FOUND";
+const char STR_EV_BEACON_MISSED[] PROGMEM  = "BEACON_MISSED";
+const char STR_EV_BEACON_TRACKED[] PROGMEM = "BEACON_TRACKED";
+const char STR_EV_JOINING[] PROGMEM        = "JOINING";
+const char STR_EV_JOINED[] PROGMEM         = "JOINED";
+const char STR_EV_RFU1[] PROGMEM           = "RFU1";
+const char STR_EV_JOIN_FAILED[] PROGMEM    = "JOIN_FAILED";
+const char STR_EV_REJOIN_FAILED[] PROGMEM  = "REJOIN_FAILED";
+const char STR_EV_TXCOMPLETE[] PROGMEM     = "TXCOMPLETE";
+const char STR_EV_LOST_TSYNC[] PROGMEM     = "LOST_TSYNC";
+const char STR_EV_RESET[] PROGMEM          = "RESET";
+const char STR_EV_RXCOMPLETE[] PROGMEM     = "RXCOMPLETE";
+const char STR_EV_ADR_BACKOFF[] PROGMEM    = "ADR_BACKOFF";
+const char STR_EV_LINK_DEAD[] PROGMEM      = "LINK_DEAD";
+const char STR_EV_LINK_ALIVE[] PROGMEM     = "LINK_ALIVE";
+const char STR_EV_SCAN_FOUND[] PROGMEM     = "SCAN_FOUND";
+const char STR_EV_TXSTART[] PROGMEM        = "TXSTART";
+const char STR_EV_TXDONE[] PROGMEM         = "TXDONE";
+const char STR_EV_DATARATE[] PROGMEM       = "DATARATE";
+const char STR_EV_START_SCAN[] PROGMEM     = "START_SCAN";
+
+static const char* const evnames_pstr[] PROGMEM = {
+    [EV_SCAN_TIMEOUT]   = STR_EV_SCAN_TIMEOUT,
+    [EV_BEACON_FOUND]   = STR_EV_BEACON_FOUND,
+    [EV_BEACON_MISSED]  = STR_EV_BEACON_MISSED,
+    [EV_BEACON_TRACKED] = STR_EV_BEACON_TRACKED,
+    [EV_JOINING]        = STR_EV_JOINING,
+    [EV_JOINED]         = STR_EV_JOINED,
+    [EV_RFU1]           = STR_EV_RFU1,
+    [EV_JOIN_FAILED]    = STR_EV_JOIN_FAILED,
+    [EV_REJOIN_FAILED]  = STR_EV_REJOIN_FAILED,
+    [EV_TXCOMPLETE]     = STR_EV_TXCOMPLETE,
+    [EV_LOST_TSYNC]     = STR_EV_LOST_TSYNC,
+    [EV_RESET]          = STR_EV_RESET,
+    [EV_RXCOMPLETE]     = STR_EV_RXCOMPLETE,
+    [EV_ADR_BACKOFF]    = STR_EV_ADR_BACKOFF,
+    [EV_LINK_DEAD]      = STR_EV_LINK_DEAD,
+    [EV_LINK_ALIVE]     = STR_EV_LINK_ALIVE,
+    [EV_SCAN_FOUND]     = STR_EV_SCAN_FOUND,
+    [EV_TXSTART]        = STR_EV_TXSTART,
+    [EV_TXDONE]         = STR_EV_TXDONE,
+    [EV_DATARATE]       = STR_EV_DATARATE,
+    [EV_START_SCAN]     = STR_EV_START_SCAN,
+};
+
 static void debug_vprintf_pstr(const char *format, va_list arg) {
     char c;
     int width, left, base, zero, space, plus, prec, sign;
@@ -363,8 +409,12 @@ static void debug_vprintf_pstr(const char *format, va_list arg) {
 		}
 		case 'e': { // LMIC event name
 		    int ev = va_arg(arg, int);
-		    const char *evn = (ev < sizeof(evnames)/sizeof(evnames[0]) && evnames[ev]) ? evnames[ev] : "UNKNOWN";
-		    strpad_print(evn, strlen(evn), width, left, ' ');
+		    const char *evn = NULL;
+		    if (ev < sizeof(evnames_pstr)/sizeof(evnames_pstr[0]))
+			evn = pgm_read_ptr(&evnames_pstr[ev]);
+		    if (!evn)
+			evn = PSTR("UNKNOWN");
+		    strpad_print_pstr(evn, strlen_P(evn), width, left, ' ');
 		    break;
 		}
 		case 'E': // EUI64, lsbf (no field padding)
