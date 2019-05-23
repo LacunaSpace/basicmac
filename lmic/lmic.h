@@ -472,6 +472,10 @@ const char* LMIC_addr2func (void* addr);
 int LMIC_arr2len (const char* name);
 #endif
 
+// Declare onEvent() function, to make sure any definition will have the
+// C conventions, even when in a C++ file.
+DECL_ON_LMIC_EVENT;
+
 // Special APIs - for development or testing
 // !!!See implementation for caveats!!!
 #if defined(CFG_extapi)
