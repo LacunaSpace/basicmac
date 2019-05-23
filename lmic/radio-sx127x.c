@@ -286,6 +286,7 @@ static const u2_t LORA_RXDONE_FIXUP_500[] = {
 #define RegPaDac                    SX1272_RegPaDac
 #define RegTcxo                     SX1272_RegTcxo
 #define LORA_TXDONE_FIXUP           us2osticks(43) // XXX
+#define LORA_RXSTART_FIXUP          us2osticks(0) // XXX
 #define FSK_TXDONE_FIXUP            us2osticks(0) // XXX
 #define FSK_RXDONE_FIXUP            us2osticks(0) // XXX
 
