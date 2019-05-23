@@ -255,6 +255,16 @@ static int strpad_print (const char *str, int len, int width, int leftalign, cha
     return width;
 }
 
+static int strpad_print_pstr (const char *str, int len, int width, int leftalign, char pad) {
+    if(len > width) {
+	width = len;
+    }
+    for(int i=0, npad=width-len; i<width; i++) {
+	debug_char((leftalign) ? ((i<len) ? get_char(&str[i]) : pad) : ((i<npad) ? pad : get_char(&str[i-npad])));
+    }
+    return width;
+}
+
 static void debug_vprintf_pstr(const char *format, va_list arg) {
     char c;
     int width, left, base, zero, space, plus, prec, sign;
@@ -310,6 +320,15 @@ static void debug_vprintf_pstr(const char *format, va_list arg) {
 			l = prec;
 		    }
 		    strpad_print(s, l, width, left, ' ');
+		    break;
+		}
+		case 'P': { // nul-terminated string
+		    char *s = va_arg(arg, char *);
+		    int l = strlen_P(s);
+		    if(prec && l > prec) {
+			l = prec;
+		    }
+		    strpad_print_pstr(s, l, width, left, ' ');
 		    break;
 		}
 		case 'd': // signed integer as decimal
