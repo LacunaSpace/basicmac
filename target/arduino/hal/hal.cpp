@@ -37,7 +37,7 @@ static void hal_io_init () {
 }
 
 // val == 1  => tx 1
-void hal_pin_rxtx (u1_t val) {
+void hal_pin_rxtx (s1_t val) {
     if (lmic_pins.rxtx != LMIC_UNUSED_PIN)
         digitalWrite(lmic_pins.rxtx, val);
 }
@@ -55,6 +55,10 @@ void hal_pin_rst (u1_t val) {
     }
 }
 
+void hal_irqmask_set (int mask) {
+    // Not implemented
+}
+
 static bool dio_states[NUM_DIO] = {0};
 
 static void hal_io_check() {
@@ -66,9 +70,18 @@ static void hal_io_check() {
         if (dio_states[i] != digitalRead(lmic_pins.dio[i])) {
             dio_states[i] = !dio_states[i];
             if (dio_states[i])
-                radio_irq_handler(i);
+                radio_irq_handler(i, hal_ticks());
         }
     }
+}
+
+bool hal_pin_tcxo (u1_t val) {
+    // Not implemented
+    return false;
+}
+
+void hal_pin_busy_wait (void) {
+    // Not implemented
 }
 
 // -----------------------------------------------------------------------------
@@ -80,14 +93,14 @@ static void hal_spi_init () {
     SPI.begin();
 }
 
-void hal_pin_nss (u1_t val) {
-    if (!val)
+void hal_spi_select (int on) {
+    if (on)
         SPI.beginTransaction(settings);
     else
         SPI.endTransaction();
 
     //Serial.println(val?">>":"<<");
-    digitalWrite(lmic_pins.nss, val);
+    digitalWrite(lmic_pins.nss, !on);
 }
 
 // perform SPI transaction with radio
@@ -154,6 +167,17 @@ u4_t hal_ticks () {
     static_assert(US_PER_OSTICK_EXPONENT > 0 && US_PER_OSTICK_EXPONENT < 8, "Invalid US_PER_OSTICK_EXPONENT value");
 }
 
+u8_t hal_xticks (void) {
+    // TODO
+    return hal_ticks();
+}
+/* Not actually used now
+s2_t hal_subticks (void) {
+    // TODO
+    return 0;
+}
+*/
+
 // Returns the number of ticks until time. Negative values indicate that
 // time has already passed.
 static s4_t delta_time(u4_t time) {
@@ -201,9 +225,46 @@ void hal_enableIRQs () {
     }
 }
 
-void hal_sleep () {
+u1_t hal_sleep (u1_t type, u4_t targettime) {
+    // Actual sleeping not implemented, but jobs are only run when this
+    // function returns 0, so make sure we only do that when the
+    // targettime is close. When asked to sleep forever (until woken up
+    // by an interrupt), just return immediately to keep polling.
+    if (type == HAL_SLEEP_FOREVER)
+        return 0;
+
+    // TODO: What value should we use for "close"?
+    return delta_time(targettime) < 10 ? 0 : 1;
+}
+
+void hal_watchcount (int cnt) {
     // Not implemented
 }
+
+// -----------------------------------------------------------------------------
+// DEBUG
+
+#ifdef CFG_DEBUG
+static void hal_debug_init() {
+    #ifdef LED_BUILTIN
+    pinMode(LED_BUILTIN, OUTPUT);
+    #endif
+}
+
+#if !defined(CFG_DEBUG_STREAM)
+#error "CFG_DEBUG needs CFG_DEBUG_STREAM defined in target-config.h"
+#endif
+
+void hal_debug_str (const char* str) {
+    CFG_DEBUG_STREAM.print(str);
+}
+
+void hal_debug_led (int val) {
+    #ifdef LED_BUILTIN
+    digitalWrite(LED_BUILTIN, val);
+    #endif
+}
+#endif // CFG_DEBUG
 
 // -----------------------------------------------------------------------------
 
@@ -227,7 +288,7 @@ void hal_printf_init() {
 }
 #endif // defined(LMIC_PRINTF_TO)
 
-void hal_init () {
+void hal_init (void *bootarg) {
     // configure radio I/O and interrupt handler
     hal_io_init();
     // configure radio SPI
@@ -238,16 +299,69 @@ void hal_init () {
     // printf support
     hal_printf_init();
 #endif
+#ifdef CFG_DEBUG
+    hal_debug_init();
+#endif
 }
 
-void hal_failed (const char *file, u2_t line) {
-#if defined(LMIC_FAILURE_TO)
-    LMIC_FAILURE_TO.println("FAILURE ");
-    LMIC_FAILURE_TO.print(file);
-    LMIC_FAILURE_TO.print(':');
-    LMIC_FAILURE_TO.println(line);
-    LMIC_FAILURE_TO.flush();
+void hal_failed () {
+#ifdef CFG_DEBUG
+    CFG_DEBUG_STREAM.flush();
 #endif
     hal_disableIRQs();
     while(1);
+}
+
+void hal_reboot (void) {
+    // TODO
+    hal_failed();
+}
+
+u1_t hal_getBattLevel (void) {
+    // Not implemented
+    return 0;
+}
+
+void hal_setBattLevel (u1_t level) {
+    // Not implemented
+}
+
+void hal_fwinfo (hal_fwi* fwi) {
+    // Not implemented
+}
+
+u1_t* hal_joineui (void) {
+    return nullptr;
+}
+
+u1_t* hal_deveui (void) {
+    return nullptr;
+}
+
+u1_t* hal_nwkkey (void) {
+    return nullptr;
+}
+
+u1_t* hal_appkey (void) {
+    return nullptr;
+}
+
+u1_t* hal_serial (void) {
+    return nullptr;
+}
+
+u4_t  hal_region (void) {
+    return 0;
+}
+
+u4_t  hal_hwid (void) {
+    return 0;
+}
+
+u4_t  hal_unique (void) {
+    return 0;
+}
+
+u4_t hal_dnonce_next (void) {
+    return 0;
 }

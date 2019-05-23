@@ -6,6 +6,8 @@
 #ifndef _region_h_
 #define _region_h_
 
+#include "board.h"
+
 // public region codes - DO NOT CHANGE!
 enum {
     REGCODE_UNDEF = 0,
