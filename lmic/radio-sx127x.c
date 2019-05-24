@@ -1065,7 +1065,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
 	    debug_printf("RX[freq=%.1F,sf=%d,bw=%s,rssi=%d,snr=%.2F,len=%d%s]: %h\r\n",
 			 LMIC.freq, 6,
 			 getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
-			 LMIC.rssi - RSSI_OFF, LMIC.snr * 100 / SNR_SCALEUP, 2,
+			 LMIC.rssi - RSSI_OFF, (s4_t)(LMIC.snr * 100 / SNR_SCALEUP), 2,
 			 LMIC.dataLen,
 			 "",
 			 LMIC.frame, LMIC.dataLen);

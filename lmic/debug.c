@@ -23,10 +23,10 @@ static void btoa (char* buf, unsigned char b) {
     buf[1] = "0123456789ABCDEF"[b&0xF];
 }
 
-static int itoa (char* buf, unsigned int val, int base, int mindigits, int exp, int prec, char sign) {
+static int itoa (char* buf, u4_t val, int base, int mindigits, int exp, int prec, char sign) {
     char num[33], *p = num, *b = buf;
     if(sign) {
-	if((int)val < 0) {
+	if((s4_t)val < 0) {
 	    val = -val;
 	    *b++ = '-';
 	} else if(sign != '-') {
@@ -166,7 +166,7 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
 		    }
 		case 'F': { // signed integer and exponent as fixed-point decimal
 		    char num[33], pad = (zero && left==0) ? '0' : ' ';
-		    int val = va_arg(arg, int);
+		    u4_t val = va_arg(arg, u4_t);
 		    int exp = va_arg(arg, int);
 		    int len = itoa(num, val, 10, exp+2, exp, (prec) ? prec : exp, (plus) ? '+' : (space) ? ' ' : '-');
 		    dst += strpad(dst, end - dst, num, len, width, left, pad);
