@@ -914,7 +914,14 @@ void radio_reset (void) {
     power_tcxo();
 
     // drive RST pin
-    hal_pin_rst(RST_PIN_RESET_STATE);
+    bool has_reset = hal_pin_rst(RST_PIN_RESET_STATE);
+
+    // power-down TCXO
+    hal_pin_tcxo(0);
+
+    // If reset is not connected, just continue and hope for the best
+    if (!has_reset)
+        return;
 
     // wait > 100us
     hal_waitUntil(os_getTime() + ms2osticks(1));
@@ -924,9 +931,6 @@ void radio_reset (void) {
 
     // wait > 5ms
     hal_waitUntil(os_getTime() + ms2osticks(10));
-
-    // power-down TCXO
-    hal_pin_tcxo(0);
 
     // check opmode
     ASSERT( readReg(RegOpMode) == OPMODE_FSK_STANDBY );
