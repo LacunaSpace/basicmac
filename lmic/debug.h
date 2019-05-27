@@ -23,7 +23,7 @@
 
 // write formatted string to USART
 void debug_printf_pstr (char const *format, ...);
-#define debug_printf(format, ...) debug_printf_pstr(PSTR(format), ## __VA_ARGS__)
+#define debug_printf(format, ...) debug_printf_pstr(PSTR("%F: " format), (u4_t)os_getTime(), 0, ## __VA_ARGS__)
 
 // write nul-terminated string to USART
 //void debug_str (const char* str);
