@@ -38,8 +38,9 @@ bool hal_pin_tcxo (u1_t val);
 
 /*
  * control radio RST pin (0=low, 1=high, 2=floating)
+ * (return true if reset pin is connected)
  */
-void hal_pin_rst (u1_t val);
+bool hal_pin_rst (u1_t val);
 
 /*
  * wait until radio BUSY pin is low

@@ -770,13 +770,18 @@ void hal_pin_rxtx (s1_t val) {
 }
 
 // set radio RST pin to given value (or keep floating!)
-void hal_pin_rst (u1_t val) {
+bool hal_pin_rst (u1_t val) {
+    #ifdef GPIO_RST
     if(val == 0 || val == 1) { // drive pin
         SET_PIN(GPIO_RST, val);
         CFG_PIN(GPIO_RST, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
     } else { // keep pin floating
         CFG_PIN(GPIO_RST, GPIOCFG_MODE_ANA | GPIOCFG_OSPEED_400kHz | GPIOCFG_OTYPE_OPEN | GPIOCFG_PUPD_NONE);
     }
+    return true;
+    #else
+    return false;
+    #endif
 }
 
 void hal_pin_busy_wait (void) {

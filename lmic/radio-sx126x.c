@@ -715,7 +715,11 @@ void radio_startrx (bool rxcontinuous) {
 // reset radio
 void radio_reset (void) {
     // drive RST pin low
-    hal_pin_rst(0);
+    bool has_reset = hal_pin_rst(0);
+
+    // If reset is not connected, just continue and hope for the best
+    if (!has_reset)
+        return;
 
     // wait > 100us
     hal_waitUntil(os_getTime() + ms2osticks(1));

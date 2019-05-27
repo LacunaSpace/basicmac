@@ -43,9 +43,9 @@ void hal_pin_rxtx (s1_t val) {
 }
 
 // set radio RST pin to given value (or keep floating!)
-void hal_pin_rst (u1_t val) {
+bool hal_pin_rst (u1_t val) {
     if (lmic_pins.rst == LMIC_UNUSED_PIN)
-        return;
+        return false;
 
     if(val == 0 || val == 1) { // drive pin
         pinMode(lmic_pins.rst, OUTPUT);
@@ -53,6 +53,7 @@ void hal_pin_rst (u1_t val) {
     } else { // keep pin floating
         pinMode(lmic_pins.rst, INPUT);
     }
+    return true;
 }
 
 void hal_irqmask_set (int mask) {
