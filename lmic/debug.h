@@ -35,7 +35,8 @@
 int debug_snprintf (char *str, int size, const char *format, ...);
 
 // write formatted string to USART
-void debug_printf (char const *format, ...);
+void debug_printf_real (char const *format, ...);
+#define debug_printf(format, ...) debug_printf_real("%10t: " format, os_getTime(), ## __VA_ARGS__)
 
 // write nul-terminated string to USART
 void debug_str (const char* str);

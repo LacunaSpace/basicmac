@@ -260,7 +260,7 @@ int debug_snprintf (char *str, int size, const char *format, ...) {
     return length;
 }
 
-void debug_printf (char const *format, ...) {
+void debug_printf_real (char const *format, ...) {
     char buf[256];
     va_list arg;
 
