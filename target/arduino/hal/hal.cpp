@@ -335,7 +335,8 @@ void hal_init (void *bootarg) {
 
 void hal_failed () {
     Serial.flush();
-    hal_disableIRQs();
+    // keep IRQs enabled, to allow e.g. USB to continue to run and allow
+    // firmware uploads on boards with native USB.
     while(1);
 }
 
