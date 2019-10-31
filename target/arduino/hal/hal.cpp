@@ -399,5 +399,5 @@ u4_t  hal_unique (void) {
 }
 
 u4_t hal_dnonce_next (void) {
-    return 0;
+    return os_getRndU2();
 }
