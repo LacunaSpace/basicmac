@@ -17,6 +17,7 @@ struct lmic_pinmap {
     u1_t rxtx;
     u1_t rst;
     u1_t dio[NUM_DIO];
+    u1_t busy;
 };
 
 // Use this for any unused pins.
