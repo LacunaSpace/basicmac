@@ -269,6 +269,11 @@ static void SetDIO2AsRfSwitchCtrl (uint8_t enable) {
     writecmd(CMD_SETDIO2ASRFSWITCHCTRL, &enable, 1);
 }
 
+// use DIO3 to drive crystal enable switch
+static void SetDIO3AsTcxoCtrl (uint8_t enable) {
+    writecmd(CMD_SETDIO3ASTCXOCTRL, &enable, 1);
+}
+
 // write payload to fifo buffer at offset 0
 static void WriteFifo (uint8_t *buf, uint8_t len) {
     static const uint8_t txrxbase[] = { 0, 0 };
