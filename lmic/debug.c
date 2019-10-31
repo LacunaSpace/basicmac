@@ -241,9 +241,6 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
     return dst - str - 1;
 }
 
-static char get_char(const char* pstr) {
-    return pgm_read_byte(pstr);
-}
 
 static int strpad_print (const char *str, int len, int width, int leftalign, char pad) {
     if(len > width) {
@@ -253,6 +250,11 @@ static int strpad_print (const char *str, int len, int width, int leftalign, cha
 	debug_char((leftalign) ? ((i<len) ? str[i] : pad) : ((i<npad) ? pad : str[i-npad]));
     }
     return width;
+}
+
+#if defined(__AVR__)
+static char get_char(const char* pstr) {
+    return pgm_read_byte(pstr);
 }
 
 static int strpad_print_pstr (const char *str, int len, int width, int leftalign, char pad) {
@@ -483,6 +485,8 @@ static void debug_vprintf_pstr(const char *format, va_list arg) {
     ;
 }
 
+#endif // defined(__AVR__)
+
 int debug_snprintf (char *str, int size, const char *format, ...) {
     va_list arg;
     int length;
@@ -493,8 +497,7 @@ int debug_snprintf (char *str, int size, const char *format, ...) {
     return length;
 }
 
-/*
-void debug_printf(char const *format, ...) {
+void debug_printf_str(char const *format, ...) {
     char buf[256];
     va_list arg;
 
@@ -503,8 +506,8 @@ void debug_printf(char const *format, ...) {
     va_end(arg);
     debug_str(buf);
 }
-*/
 
+#if defined(__AVR__)
 void debug_printf_pstr (char const *format, ...) {
     va_list arg;
 
@@ -512,5 +515,6 @@ void debug_printf_pstr (char const *format, ...) {
     debug_vprintf_pstr(format, arg);
     va_end(arg);
 }
+#endif // defined(__AVR__)
 
 #endif

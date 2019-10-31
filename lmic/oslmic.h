@@ -44,7 +44,11 @@ typedef const char*	str_t;
     if(!(cond)) { fprintf(stderr, "ASSERTION FAILED: %s at %s:%d\n", \
 			  #cond, __FILE__, __LINE__); hal_failed(); } } while (0)
 #elif defined(CFG_DEBUG)
+#if defined(__AVR__)
 #define ASSERT(cond) do { if(!(cond)) { debug_printf("%P:%d: assertion failed\r\n", PSTR(__FILE__), __LINE__); hal_failed(); } } while (0)
+#else
+#define ASSERT(cond) do { if(!(cond)) { debug_printf("%s:%d: assertion failed\r\n", __FILE__, __LINE__); hal_failed(); } } while (0)
+#endif
 #else
 #define ASSERT(cond) do { if(!(cond)) hal_failed(); } while (0)
 #endif

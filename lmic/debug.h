@@ -21,6 +21,7 @@
 
 #else
 
+#if defined(__AVR__)
 #include <avr/pgmspace.h>
 
 // write formatted string to buffer
@@ -32,6 +33,10 @@ void debug_printf_pstr (char const *format, ...);
 
 // write nul-terminated string to USART
 //void debug_str (const char* str);
+#else
+void debug_printf_str (char const *format, ...);
+#define debug_printf(format, ...) debug_printf_str("%F: " format, (u4_t)os_getTime(), 0, ## __VA_ARGS__)
+#endif
 
 // set LED state
 void debug_led (int val);
