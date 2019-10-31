@@ -129,6 +129,22 @@
 #define IRQ_TIMEOUT		(1 << 9)
 #define IRQ_ALL 		0x3FF
 
+// TCXO voltages (limited to VDD - 200mV)
+#define TCXO_VOLTAGE1_6V	0x00
+#define TCXO_VOLTAGE1_7V	0x01
+#define TCXO_VOLTAGE1_8V	0x02
+#define TCXO_VOLTAGE2_2V	0x03
+#define TCXO_VOLTAGE2_4V	0x04
+#define TCXO_VOLTAGE2_7V	0x05
+#define TCXO_VOLTAGE3_0V	0x06
+#define TCXO_VOLTAGE3_3V	0x07
+
+// XXX: These should probably be configurable
+// XXX: The startup time delays TX/RX by 320*15.625=5ms, maybe switch on
+// TCXO early?
+#define TCXO_VOLTAGE TCXO_VOLTAGE1_7V
+#define TCXO_STARTUP_TIME 320 // In multiples of 15.625μs
+
 #define LORA_TXDONE_FIXUP       us2osticks(269) // determined by lwtestapp using device pin wired to sx1301 pps...
 #define FSK_TXDONE_FIXUP        us2osticks(0) // XXX
 #define FSK_RXDONE_FIXUP        us2osticks(0) // XXX
@@ -267,6 +283,15 @@ static void SetRegulatorMode (uint8_t mode) {
 // use DIO2 to drive antenna rf switch
 static void SetDIO2AsRfSwitchCtrl (uint8_t enable) {
     writecmd(CMD_SETDIO2ASRFSWITCHCTRL, &enable, 1);
+}
+
+// use DIO3 to drive crystal enable switch
+static void SetDIO3AsTcxoCtrl () {
+    uint32_t timeout = TCXO_STARTUP_TIME;
+    uint8_t voltage = TCXO_VOLTAGE1_7V;
+    uint8_t data[] = {voltage, (timeout >> 16) & 0xff, (timeout >> 8) & 0xff, timeout & 0xff };
+
+    writecmd(CMD_SETDIO3ASTCXOCTRL, data, sizeof(data));
 }
 
 // write payload to fifo buffer at offset 0
@@ -524,6 +549,7 @@ void radio_sleep (void) {
 static void txlora (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_LORA);
     SetRfFrequency(LMIC.freq);
@@ -549,6 +575,7 @@ static void txlora (void) {
 static void txfsk (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_FSK);
     SetRfFrequency(LMIC.freq);
@@ -576,6 +603,7 @@ static void txfsk (void) {
 static void txcw (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl();
     SetStandby(STDBY_RC);
     SetRfFrequency(LMIC.freq);
     SetTxPower(LMIC.txpow + LMIC.txPowAdj + TX_ERP_ADJ); // bandpow + MACadj/APIadj + ERPadj
@@ -608,6 +636,7 @@ static void rxfsk (bool rxcontinuous) {
     ostime_t t0 = os_getTime();
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_FSK);
     SetRfFrequency(LMIC.freq);
@@ -657,6 +686,7 @@ static void rxlora (bool rxcontinuous) {
     ostime_t t0 = os_getTime();
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_LORA);
     SetRfFrequency(LMIC.freq);
