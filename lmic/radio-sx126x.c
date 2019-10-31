@@ -270,8 +270,11 @@ static void SetDIO2AsRfSwitchCtrl (uint8_t enable) {
 }
 
 // use DIO3 to drive crystal enable switch
-static void SetDIO3AsTcxoCtrl (uint8_t enable) {
-    writecmd(CMD_SETDIO3ASTCXOCTRL, &enable, 1);
+static void SetDIO3AsTcxoCtrl (uint8_t voltage) {
+    uint32_t timeout = 320;
+    uint8_t data[] = {voltage, (timeout >> 16) & 0xff, (timeout >> 8) & 0xff, timeout & 0xff };
+
+    writecmd(CMD_SETDIO3ASTCXOCTRL, data, sizeof(data));
 }
 
 // write payload to fifo buffer at offset 0
@@ -529,6 +532,7 @@ void radio_sleep (void) {
 static void txlora (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl(1);
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_LORA);
     SetRfFrequency(LMIC.freq);
@@ -554,6 +558,7 @@ static void txlora (void) {
 static void txfsk (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl(1);
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_FSK);
     SetRfFrequency(LMIC.freq);
@@ -581,6 +586,7 @@ static void txfsk (void) {
 static void txcw (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl(1);
     SetStandby(STDBY_RC);
     SetRfFrequency(LMIC.freq);
     SetTxPower(LMIC.txpow + LMIC.txPowAdj + TX_ERP_ADJ); // bandpow + MACadj/APIadj + ERPadj
@@ -613,6 +619,7 @@ static void rxfsk (bool rxcontinuous) {
     ostime_t t0 = os_getTime();
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl(1);
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_FSK);
     SetRfFrequency(LMIC.freq);
@@ -662,6 +669,7 @@ static void rxlora (bool rxcontinuous) {
     ostime_t t0 = os_getTime();
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
+    SetDIO3AsTcxoCtrl(1);
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_LORA);
     SetRfFrequency(LMIC.freq);
