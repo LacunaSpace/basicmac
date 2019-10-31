@@ -20,10 +20,10 @@
 #define US_PER_OSTICK (1 << US_PER_OSTICK_EXPONENT)
 #define OSTICKS_PER_SEC (1000000 / US_PER_OSTICK)
 
-//#define CFG_DEBUG
-//#define CFG_DEBUG_VERBOSE
-//#define DEBUG_TX
-//#define DEBUG_RX
+#define CFG_DEBUG
+#define CFG_DEBUG_VERBOSE
+#define DEBUG_TX
+#define DEBUG_RX
 
 // Uncomment this to disable all code related to beacon tracking.
 // Requires ping to be disabled too
