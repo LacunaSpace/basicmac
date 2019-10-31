@@ -18,10 +18,21 @@
 // I/O
 
 static void hal_io_init () {
-    // NSS and DIO0 are required, DIO1 is required for LoRa, DIO2 for FSK
+    uint8_t i;
     ASSERT(lmic_pins.nss != LMIC_UNUSED_PIN);
+
+#if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
+    //DIO0 is required, DIO1 is required for LoRa, DIO2 for FSK
     ASSERT(lmic_pins.dio[0] != LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.dio[1] != LMIC_UNUSED_PIN || lmic_pins.dio[2] != LMIC_UNUSED_PIN);
+#elif defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+    // Only DIO1 should be specified
+    ASSERT(lmic_pins.dio[0] == LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.dio[1] != LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.dio[2] == LMIC_UNUSED_PIN);
+#else
+    #error "Unknown radio type?"
+#endif
 
     pinMode(lmic_pins.nss, OUTPUT);
     if (lmic_pins.rxtx != LMIC_UNUSED_PIN)
@@ -29,11 +40,10 @@ static void hal_io_init () {
     if (lmic_pins.rst != LMIC_UNUSED_PIN)
         pinMode(lmic_pins.rst, OUTPUT);
 
-    pinMode(lmic_pins.dio[0], INPUT);
-    if (lmic_pins.dio[1] != LMIC_UNUSED_PIN)
-        pinMode(lmic_pins.dio[1], INPUT);
-    if (lmic_pins.dio[2] != LMIC_UNUSED_PIN)
-        pinMode(lmic_pins.dio[2], INPUT);
+    for (i = 0; i < NUM_DIO; ++i) {
+        if (lmic_pins.dio[i] != LMIC_UNUSED_PIN)
+            pinMode(lmic_pins.dio[i], INPUT);
+    }
 }
 
 // val == 1  => tx 1
