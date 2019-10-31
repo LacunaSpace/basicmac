@@ -343,7 +343,8 @@ void hal_failed () {
 #ifdef CFG_DEBUG
     CFG_DEBUG_STREAM.flush();
 #endif
-    hal_disableIRQs();
+    // keep IRQs enabled, to allow e.g. USB to continue to run and allow
+    // firmware uploads on boards with native USB.
     while(1);
 }
 
