@@ -164,7 +164,7 @@ u1_t os_getRndU1 (void);
 #ifndef OSTICKS_PER_SEC
 #define OSTICKS_PER_SEC 32768
 #elif OSTICKS_PER_SEC < 10000 || OSTICKS_PER_SEC > 64516
-#error Illegal OSTICKS_PER_SEC - must be in range [10000:64516]. One tick must be 15.5us .. 100us long.
+#warning Illegal OSTICKS_PER_SEC - must be in range [10000:64516]. One tick must be 15.5us .. 100us long.
 #endif
 
 typedef s4_t  ostime_t;
