@@ -14,6 +14,12 @@
 #include "hal.h"
 #include <stdio.h>
 
+// Datasheet defins typical times until busy goes low. Most are < 200us,
+// except when waking up from sleep, which typically takes 3500us. Since
+// we cannot know here if we are in sleep, we'll have to assume we are.
+// Since 3500 is typical, not maximum, wait a bit more than that.
+static unsigned long MAX_BUSY_TIME = 5000;
+
 // -----------------------------------------------------------------------------
 // I/O
 
@@ -32,6 +38,10 @@ static void hal_io_init () {
     ASSERT(lmic_pins.dio[2] == LMIC_UNUSED_PIN);
 #else
     #error "Unknown radio type?"
+#endif
+
+#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+    ASSERT(lmic_pins.busy != LMIC_UNUSED_PIN);
 #endif
 
     pinMode(lmic_pins.nss, OUTPUT);
@@ -92,7 +102,19 @@ bool hal_pin_tcxo (u1_t val) {
 }
 
 void hal_pin_busy_wait (void) {
-    // Not implemented
+    if (lmic_pins.busy == LMIC_UNUSED_PIN) {
+        // TODO: We could probably keep some state so we know the chip
+        // is in sleep, since otherwise the delay can be much shorter.
+        // Also, all delays after commands (rather than waking up from
+        // sleep) are measured from the *end* of the previous SPI
+        // transaction, so we could wait shorter if we remember when
+        // that was.
+        delayMicroseconds(MAX_BUSY_TIME);
+    } else {
+        unsigned long start = micros();
+
+        while((micros() - start) < MAX_BUSY_TIME && digitalRead(lmic_pins.busy)) /* wait */;
+    }
 }
 
 // -----------------------------------------------------------------------------
