@@ -8,11 +8,14 @@
  * This the HAL to run LMIC on top of the Arduino environment.
  *******************************************************************************/
 
+#define _GNU_SOURCE 1 // For fopencookie
+// Must be first, otherwise it might have already been included without _GNU_SOURCE
+#include <stdio.h>
+#undef _GNU_SOURCE
 #include <Arduino.h>
 #include <SPI.h>
 #include "../lmic.h"
 #include "hal.h"
-#include <stdio.h>
 
 // Datasheet defins typical times until busy goes low. Most are < 200us,
 // except when waking up from sleep, which typically takes 3500us. Since
@@ -304,6 +307,8 @@ void hal_debug_led (int val) {
 // -----------------------------------------------------------------------------
 
 #if defined(LMIC_PRINTF_TO)
+#if defined(__AVR__)
+// On AVR, use the AVR-specific fdev_setup_stream to redirect stdout
 static int uart_putchar (char c, FILE *)
 {
     LMIC_PRINTF_TO.write(c) ;
@@ -321,6 +326,31 @@ void hal_printf_init() {
     // The uart is the standard output device STDOUT.
     stdout = &uartout ;
 }
+#else
+// On non-AVR platforms, use the somewhat more complex "cookie"-based
+// approach to custom streams. This is a GNU-specific extension to libc.
+static ssize_t uart_putchar (void *, const char *buf, size_t len) {
+    auto res = LMIC_PRINTF_TO.write(buf, len);
+    // Since the C interface has no meaningful way to flush (fflush() is a
+    // no-op on AVR since stdio does not introduce any buffering), just flush
+    // every byte.
+    LMIC_PRINTF_TO.flush();
+    return res;
+}
+
+static cookie_io_functions_t functions = {
+    .read = NULL,
+    .write = uart_putchar,
+    .seek = NULL,
+    .close = NULL
+};
+
+void hal_printf_init() {
+    stdout = fopencookie(NULL, "w", functions);
+    // Disable buffering, so the callbacks get called right away
+    setbuf(stdout, nullptr);
+}
+#endif // !defined(__AVR__)
 #endif // defined(LMIC_PRINTF_TO)
 
 void hal_init (void *bootarg) {
