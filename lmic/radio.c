@@ -111,10 +111,10 @@ void os_radio (u1_t mode) {
 			 (LMIC.pendTxPort != 0 && (LMIC.frame[OFF_DAT_FCT] & FCT_ADRARQ)) ? ",ADRARQ" : "",
 			 LMIC.frame, LMIC.dataLen);
 #endif
-	    // set timeout for tx operation (should not happen)
-	    radio_set_irq_timeout(os_getTime() + ms2osticks(20) + LMIC_calcAirTime(LMIC.rps, LMIC.dataLen) * 110 / 100);
 	    // transmit frame now (wait for completion interrupt)
 	    radio_starttx(0);
+	    // set timeout for tx operation (should not happen)
+	    radio_set_irq_timeout(os_getTime() + ms2osticks(20) + LMIC_calcAirTime(LMIC.rps, LMIC.dataLen) * 110 / 100);
 	    break;
 
 	case RADIO_RX:
@@ -125,10 +125,10 @@ void os_radio (u1_t mode) {
 			 getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
 			 LMIC.rxtime, 0);
 #endif
-	    // set timeout for rx operation (should not happen, might be updated by radio driver)
-	    radio_set_irq_timeout(LMIC.rxtime + ms2osticks(5) + LMIC_calcAirTime(LMIC.rps, 255) * 110 / 100);
 	    // receive frame at rxtime/now (wait for completion interrupt)
 	    radio_startrx(0);
+	    // set timeout for rx operation (should not happen, might be updated by radio driver)
+	    radio_set_irq_timeout(LMIC.rxtime + ms2osticks(5) + LMIC_calcAirTime(LMIC.rps, 255) * 110 / 100);
 	    break;
 
 	case RADIO_RXON:
