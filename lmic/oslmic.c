@@ -178,10 +178,18 @@ void os_runstep (void) {
         hal_enableIRQs();
     }
     if (j) { // run job callback
-        debug_verbose_printf("Running job %u, cb %u, deadline %F\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline, 0);
+	// Only print when interrupts are enabled, some Arduino cores do
+	// not handle printing with IRQs disabled
+	if( (j->flags & OSJOB_FLAG_IRQDISABLED) == 0) {
+	    debug_verbose_printf("Running job %u, cb %u, deadline %F\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline, 0);
+	}
 	hal_watchcount(30); // max 60 sec
 	j->func(j);
 	hal_watchcount(0);
+	// If we could not print before, at least print after
+	if( (j->flags & OSJOB_FLAG_IRQDISABLED) != 0) {
+	    debug_verbose_printf("Ran job %u, cb %u, deadline %F\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline, 0);
+	}
     }
 }
 
