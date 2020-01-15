@@ -656,6 +656,12 @@ static void rxfsk (bool rxcontinuous) {
     // enable IRQs in HAL
     hal_irqmask_set(HAL_IRQMASK_DIO1);
 
+    ostime_t now = os_getTime();
+    if (!rxcontinuous && LMIC.rxtime - now < 0) {
+        debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
+                     now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
+    }
+
     // now receive (lock interrupts only for final fine tuned rx timing...)
     hal_disableIRQs();
     if (rxcontinuous) { // continous rx
@@ -667,11 +673,6 @@ static void rxfsk (bool rxcontinuous) {
     } else { // single rx
 	BACKTRACE();
 	// busy wait until exact rx time
-	ostime_t now = os_getTime();
-	if (LMIC.rxtime - now < 0) {
-	    debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
-			 now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
-	}
         hal_waitUntil(LMIC.rxtime);
 	// enable antenna switch for RX (and account power consumption)
 	hal_pin_rxtx(0);
@@ -705,6 +706,14 @@ static void rxlora (bool rxcontinuous) {
     // enable IRQs in HAL
     hal_irqmask_set(HAL_IRQMASK_DIO1);
 
+    ostime_t now = os_getTime();
+    if (!rxcontinuous && LMIC.rxtime - now < 0) {
+        // Print before disabling IRQs, to work around deadlock on some
+        // Arduino cores that doe not really support printing without IRQs
+	debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
+                     now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
+    }
+
     // now receive (lock interrupts only for final fine tuned rx timing...)
     hal_disableIRQs();
     if (rxcontinuous) { // continous rx
@@ -716,11 +725,6 @@ static void rxlora (bool rxcontinuous) {
     } else { // single rx
 	BACKTRACE();
 	// busy wait until exact rx time
-	ostime_t now = os_getTime();
-	if (LMIC.rxtime - now < 0) {
-	    debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
-			 now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
-	}
         hal_waitUntil(LMIC.rxtime);
 	// enable antenna switch for RX (and account power consumption)
 	hal_pin_rxtx(0);
