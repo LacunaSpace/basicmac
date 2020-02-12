@@ -68,3 +68,9 @@ $CMD "$SRC"/../../aes "$TARGET"/src
 $CMD "$SRC"/examples "$TARGET"
 $CMD "$SRC"/board.h "$TARGET"/src/lmic
 $CMD "$SRC"/hw.h "$TARGET"/src/lmic
+
+# Then copy/link the common files (e.g. pinmap) into each example
+# directory
+for E in "$TARGET"/examples/*; do
+	$CMD "$SRC"/examples-common-files/* "$E"
+done
