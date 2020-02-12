@@ -58,13 +58,102 @@ u1_t os_getRegion (void) { return REGCODE_EU868; }
 // cycle limitations).
 const unsigned TX_INTERVAL = 60000;
 
-// Pin mapping
+
+#if defined(ARDUINO_AVR_MINI)
+#if !defined(BRD_sx1276_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// Assume this is a Nexus board
 const lmic_pinmap lmic_pins = {
-    .nss = 6,
-    .rxtx = LMIC_UNUSED_PIN,
-    .rst = 5,
-    .dio = {2, 3, 4},
+    .nss = 10,
+    // RX/TX is controlled through RXTX by the SX1272 directly on the RFM95W
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    // RST is hardwarid to MCU reset
+    .rst = LMIC_UNUSED_PIN,
+    .dio = {4, 5, 7},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
 };
+#elif defined(ARDUINO_MJS_V1)
+#if !defined(BRD_sx1276_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// https://github.com/meetjestad/mjs_pcb
+const lmic_pinmap lmic_pins = {
+    .nss = 10,
+    // RX/TX is controlled through RXTX by the SX1272 directly on the RFM95W
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    .rst = 9,
+    .dio = {2, 3, 4},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#elif defined(ADAFRUIT_FEATHER_M0)
+#if !defined(BRD_sx1276_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// Assume this a Feather M0 LoRa
+const lmic_pinmap lmic_pins = {
+    .nss = 8,
+    // RX/TX is controlled through RXTX by the SX1272 directly on the RFM95W
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    .rst = 4,
+    .dio = {3, 5, 6},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#elif defined(ARDUINO_STM32L4_LS200)
+#if !defined(BRD_sx1262_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// LacunaSpace LS200 development board
+// Uses SPI bus at PC10/11/12
+// This uses E22_* constants from the board variant file
+const lmic_pinmap lmic_pins = {
+    .nss = E22_NSS, // PD2
+    // TXEN is controlled through DIO2 by the SX1262 directly
+    .tx = LMIC_UNUSED_PIN,
+    .rx = E22_RXEN, // PC4
+    .rst = E22_NRST, // PA4
+    .dio = {LMIC_UNUSED_PIN, E22_DIO1 /* PC7 */, LMIC_UNUSED_PIN},
+    .busy = E22_BUSY, // PB12
+    // TCXO is controlled through DIO3 by the SX1262 directly
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#else
+#error "Add pinmap"
+// Define your custom pinout here (and remove the #error above). Use
+// Arduino pin numbers (e.g. what you would pass to digitalWrite) below.
+const lmic_pinmap lmic_pins = {
+    // NSS input pin for SPI communication
+    .nss = 0,
+    // If needed, these pins control the RX/TX antenna switch (active
+    // high outputs). When you have both, the antenna switch can
+    // powerdown when unused. If you just have a RXTX pin it should
+    // usually be set to .tx, reverting to RX mode when idle).
+    // Often, the antenna switch is controlled directly by the radio
+    // chip, through is RXTX (SX127x) or DIO2 (SX126x) output pins.
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    // Radio reset output pin (active high for SX1276, active low for
+    // others). When omitted, reset is skipped which might cause problems.
+    .rst = 1,
+    // DIO input pins.
+    //   For SX127x, LoRa needs DIO0 and DIO1, FSK needs DIO0, DIO1 and DIO2
+    //   For SX126x, Only DIO1 is needed (so leave DIO0 and DIO2 as LMIC_UNUSED_PIN)
+    .dio = {/* DIO0 */ 2, /* DIO1 */ 3, /* DIO2 */ 4},
+    // Busy input pin (SX126x only). When omitted, a delay is used which might
+    // cause problems.
+    .busy = LMIC_UNUSED_PIN,
+    // TCXO oscillator enable output pin (active high).
+    // The SX126x can control the TCXO directly through its DIO3 output pin.
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#endif
+
 
 void onLmicEvent (ev_t ev) {
     Serial.print(os_getTime());
