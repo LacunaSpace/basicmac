@@ -46,7 +46,14 @@ static void hal_io_init () {
     ASSERT(lmic_pins.busy != LMIC_UNUSED_PIN);
 #endif
 
+    // Write HIGH to deselect (NSS is active low). Do this before
+    // setting output, to prevent a moment of OUTPUT LOW on e.g. AVR.
+    digitalWrite(lmic_pins.nss, HIGH);
     pinMode(lmic_pins.nss, OUTPUT);
+    // Write HIGH again after setting output, for architectures that
+    // reset to LOW when setting OUTPUT (e.g. arduino-STM32L4).
+    digitalWrite(lmic_pins.nss, HIGH);
+
     if (lmic_pins.tx != LMIC_UNUSED_PIN)
         pinMode(lmic_pins.tx, OUTPUT);
     if (lmic_pins.rx != LMIC_UNUSED_PIN)
