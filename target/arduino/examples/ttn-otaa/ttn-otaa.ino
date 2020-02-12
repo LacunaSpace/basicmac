@@ -38,7 +38,7 @@
 // the bytes. For TTN issued EUIs the last bytes should be 0xD5, 0xB3,
 // 0x70.
 static const u1_t PROGMEM APPEUI[8]={ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-void os_getArtEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8);}
+void os_getJoinEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8);}
 
 // This should also be in little endian format, see above.
 static const u1_t PROGMEM DEVEUI[8]={ 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -49,7 +49,10 @@ void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8);}
 // practice, a key taken from ttnctl can be copied as-is.
 // The key shown here is the semtech default key.
 static const u1_t PROGMEM APPKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
-void os_getDevKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
+void os_getNwkKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
+
+// The region to use
+u1_t os_getRegion (void) { return REGCODE_EU868; }
 
 // Schedule TX every this many milliseconds (might become longer due to duty
 // cycle limitations).
@@ -63,7 +66,7 @@ const lmic_pinmap lmic_pins = {
     .dio = {2, 3, 4},
 };
 
-void onEvent (ev_t ev) {
+void onLmicEvent (ev_t ev) {
     Serial.print(os_getTime());
     Serial.print(": ");
     switch(ev) {
@@ -125,8 +128,28 @@ void onEvent (ev_t ev) {
         case EV_LINK_ALIVE:
             Serial.println(F("EV_LINK_ALIVE"));
             break;
+        case EV_SCAN_FOUND:
+            Serial.println(F("EV_SCAN_FOUND"));
+            break;
+        case EV_TXSTART:
+            Serial.println(F("EV_TXSTART,"));
+            break;
+        case EV_TXDONE:
+            Serial.println(F("EV_TXDONE"));
+            break;
+        case EV_DATARATE:
+            Serial.println(F("EV_DATARATE"));
+            break;
+        case EV_START_SCAN:
+            Serial.println(F("EV_START_SCAN"));
+            break;
+        case EV_ADR_BACKOFF:
+            Serial.println(F("EV_ADR_BACKOFF"));
+            break;
+
          default:
-            Serial.println(F("Unknown event"));
+            Serial.print(F("Unknown event: "));
+            Serial.println(ev);
             break;
     }
 }
@@ -136,7 +159,7 @@ void setup() {
     Serial.println(F("Starting"));
 
     // LMIC init
-    os_init();
+    os_init(nullptr);
     LMIC_reset();
 
     // Enable this to increase the receive window size, to compensate
@@ -152,7 +175,7 @@ uint32_t last_packet = 0;
 
 void loop() {
     // Let LMIC handle background tasks
-    os_runloop_once();
+    os_runstep();
 
     // If TX_INTERVAL passed, *and* our previous packet is not still
     // pending (which can happen due to duty cycle limitations), send
