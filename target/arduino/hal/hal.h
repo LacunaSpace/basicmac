@@ -14,7 +14,13 @@ static const int NUM_DIO = 3;
 
 struct lmic_pinmap {
     u1_t nss;
-    u1_t rxtx;
+    // Written HIGH in TX mode, LOW otherwise.
+    // Typically used with a single RXTX switch pin.
+    u1_t tx;
+    // Written HIGH in RX mode, LOW otherwise.
+    // Typicaly used with separate RX/TX pins, to allow switching off
+    // the antenna switch completely.
+    u1_t rx;
     u1_t rst;
     u1_t dio[NUM_DIO];
     u1_t busy;
