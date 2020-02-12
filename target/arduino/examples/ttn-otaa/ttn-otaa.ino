@@ -156,6 +156,13 @@ void onLmicEvent (ev_t ev) {
 
 void setup() {
     Serial.begin(9600);
+
+    // Wait up to 5 seconds for serial to be opened, to allow catching
+    // startup messages on native USB boards (that do not reset when
+    // serial is opened).
+    unsigned long start = millis();
+    while (millis() - start < 5000 && !Serial);
+
     Serial.println(F("Starting"));
 
     // LMIC init
