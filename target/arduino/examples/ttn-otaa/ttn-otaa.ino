@@ -155,7 +155,7 @@ void onLmicEvent (ev_t ev) {
 }
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     // Wait up to 5 seconds for serial to be opened, to allow catching
     // startup messages on native USB boards (that do not reset when
