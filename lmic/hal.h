@@ -7,6 +7,10 @@
 #ifndef _hal_hpp_
 #define _hal_hpp_
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #ifdef HAL_IMPL_INC
 #include HAL_IMPL_INC
 #endif
@@ -150,5 +154,9 @@ u4_t  hal_unique (void);
 u4_t hal_dnonce_next (void);
 
 void hal_reboot (void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // _hal_hpp_

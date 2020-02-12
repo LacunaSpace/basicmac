@@ -52,6 +52,10 @@ typedef const char*	str_t;
 #define ASSERT(cond) do { } while (0)
 #endif
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #define os_minmax(vmin,v,vmax) ((vmin)>(v)?(vmin):(vmax)<(v)?(vmax):(v))
 #define os_clearMem(a,b)   memset(a,0,b)
 #define os_copyMem(a,b,c)  memcpy(a,b,c)
@@ -392,6 +396,10 @@ void radio_cca (void);
 
     // Declare a table
     #define CONST_TABLE(type, name) const type RESOLVE_TABLE(name)
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif // _oslmic_h_

@@ -8,6 +8,10 @@
 
 #include "oslmic.h"
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 // Some keyids:
 #define LCE_APPSKEY   (-2)
 #define LCE_NWKSKEY   (-1)
@@ -43,5 +47,9 @@ typedef struct lce_ctx {
     lce_ctx_mcgrp_t mcgroup[LCE_MCGRP_MAX];
 } lce_ctx_t;
 
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // _lce_h_

@@ -15,6 +15,10 @@
 #include "lorabase.h"
 #include "lce.h"
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 // LMIC version
 #define LMIC_VERSION_MAJOR 2
 #define LMIC_VERSION_MINOR 1
@@ -508,6 +512,10 @@ void     LMIC_getRxdErrInfo (s4_t* skew, u4_t* span);
 #define TRACE_VAL(v)
 #define TRACE_EV(e)
 #define TRACE_ADDR(a)
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif // _lmic_h_
