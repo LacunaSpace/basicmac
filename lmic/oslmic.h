@@ -47,7 +47,7 @@ typedef const char*	str_t;
 #if defined(__AVR__)
 #define ASSERT(cond) do { if(!(cond)) { debug_printf("%P:%d: assertion failed\r\n", PSTR(__FILE__), __LINE__); hal_failed(); } } while (0)
 #else
-#define ASSERT(cond) do { if(!(cond)) { debug_printf("%s:%d: assertion failed\r\n", __FILE__, __LINE__); hal_failed(); } } while (0)
+#define ASSERT(cond) do { if(!(cond)) { hal_enableIRQs(); debug_printf("%s:%d: assertion failed\r\n", __FILE__, __LINE__); hal_failed(); } } while (0)
 #endif
 #else
 #define ASSERT(cond) do { if(!(cond)) hal_failed(); } while (0)
