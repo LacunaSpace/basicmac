@@ -8,6 +8,10 @@
 
 #include "oslmic.h"
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 // ======================================================================
 // AES support
 // !!Keep in sync with lorabase.hpp!!
@@ -26,6 +30,10 @@ extern u1_t* AESaux;
 #endif
 #ifndef os_aes
 u4_t os_aes (u1_t mode, u1_t* buf, u2_t len);
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif // _aes_h_

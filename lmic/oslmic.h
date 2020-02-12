@@ -52,6 +52,10 @@ typedef const char*	str_t;
 #define ASSERT(cond) do { } while (0)
 #endif
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #define os_minmax(vmin,v,vmax) ((vmin)>(v)?(vmin):(vmax)<(v)?(vmax):(v))
 #define os_clearMem(a,b)   memset(a,0,b)
 #define os_copyMem(a,b,c)  memcpy(a,b,c)
@@ -330,6 +334,10 @@ void radio_cca (void);
 #define TX_ERP_ADJ	(CFG_tx_erp_adj)
 #else
 #define TX_ERP_ADJ	0
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif // _oslmic_h_
