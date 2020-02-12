@@ -56,6 +56,8 @@ static void hal_io_init () {
         pinMode(lmic_pins.rst, OUTPUT);
     if (lmic_pins.busy != LMIC_UNUSED_PIN)
         pinMode(lmic_pins.busy, INPUT);
+    if (lmic_pins.tcxo != LMIC_UNUSED_PIN)
+        pinMode(lmic_pins.tcxo, OUTPUT);
 
     for (i = 0; i < NUM_DIO; ++i) {
         if (lmic_pins.dio[i] != LMIC_UNUSED_PIN)
@@ -106,8 +108,11 @@ static void hal_io_check() {
 }
 
 bool hal_pin_tcxo (u1_t val) {
-    // Not implemented
-    return false;
+    if (lmic_pins.tcxo == LMIC_UNUSED_PIN)
+        return false;
+
+    digitalWrite(lmic_pins.tcxo, val);
+    return true;
 }
 
 void hal_pin_busy_wait (void) {
