@@ -853,6 +853,7 @@ static bit_t setupChannel_dyn (u1_t chidx, freq_t freq, drmap_t drmap) {
                 goto ok;
             }
         }
+        debug_printf("Channel %d frequency (%F) not within any known band, ignoring\r\n", chidx, freq, 6);
         return 0;
     }
   ok:
@@ -923,6 +924,7 @@ static void syncDatarate_dyn (void) {
             }
             n += 1;
         }
+        debug_printf("Current datarate (%d) not enabled in any channel, using closest instead (%d)\r\n", LMIC.datarate, dr);
         setDrTxpow(DRCHG_SET, dr, KEEP_TXPOWADJ);
     }
 }
