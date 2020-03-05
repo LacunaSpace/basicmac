@@ -191,6 +191,13 @@ void setup() {
     while (millis() - start < 5000 && !Serial);
 
     Serial.println(F("Starting"));
+    Serial.flush();
+    #ifdef VCC_ENABLE
+    // For Pinoccio Scout boards
+    pinMode(VCC_ENABLE, OUTPUT);
+    digitalWrite(VCC_ENABLE, HIGH);
+    delay(1000);
+    #endif
 
     // LMIC init
     os_init(nullptr);

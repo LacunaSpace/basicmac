@@ -74,6 +74,54 @@ const lmic_pinmap lmic_pins = {
     // TCXO is controlled through DIO3 by the SX1262 directly
     .tcxo = LMIC_UNUSED_PIN,
 };
+#elif defined(ARDUINO_PINOCCIO)
+#if !defined(BRD_sx1272_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// Pinoccio with SX1272RF1 devboard, with arbitrary pinout used by Matthijs
+const lmic_pinmap lmic_pins = {
+    .nss = SS,
+    // Might be connected to SX1272 RXTX output directly (or maybe needs
+    // a jumper wire?)
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    .rst = LMIC_UNUSED_PIN,
+    .dio = {4, 5, 7},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#elif defined(ARDUINO_SAMD_ZERO)
+#if !defined(BRD_sx1262_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// Pinout for Lacuna SX1262 shield
+const lmic_pinmap lmic_pins = {
+    .nss = 7,
+     // TXEN is controlled through DIO2 by the SX1262 directly
+    .tx = LMIC_UNUSED_PIN,
+    .rx = 8,
+    .rst = A0,
+    .dio = {LMIC_UNUSED_PIN, 5, LMIC_UNUSED_PIN},
+    .busy = 2,
+    // TCXO is controlled through DIO3 by the SX1262 directly
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#elif defined(ARDUINO_TRINKET_M0)
+#if !defined(BRD_sx1262_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// Pinout planned for MJS V2 board
+const lmic_pinmap lmic_pins = {
+    .nss = 0, // PA8 / pin 11
+    // RX/TX is controlled through DIO2 by the SX1262 directly
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    .rst = 1, // PA2 / pin 3
+    .dio = {7 /* PA0 / pin 1 */, LMIC_UNUSED_PIN /* 8 PA1 / pin 2 */, LMIC_UNUSED_PIN /* 13 PA10 / pin 13 */},
+    .busy = /* TODO */,
+    // TCXO (if any) is controlled through DIO3 by the SX1262 directly
+    .tcxo = LMIC_UNUSED_PIN,
+};
 #else
 #error "Unknown board, no standard pimap available. Define your own in the main sketch file."
 #endif
