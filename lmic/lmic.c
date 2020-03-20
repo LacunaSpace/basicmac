@@ -1292,7 +1292,7 @@ static void updateTx_fix (ostime_t txbeg) {  //XXX:BUG: this is US915/AU915 cent
         LMIC.globalDutyAvail = txbeg + (airtime<<LMIC.globalDutyRate);
     }
 
-    debug_verbose_printf("Updating info for TX at %F, airtime will be %F, frequency %.2F.\r\n", txbeg, 0 airtime, 0, LMIC.freq, 6);
+    debug_verbose_printf("Updating info for TX at %F, airtime will be %F, frequency %.2F.\r\n", txbeg, 0 ,airtime, 0, LMIC.freq, 6);
     if( LMIC.globalDutyRate != 0 )
         debug_verbose_printf("Updating global duty avail to %F\r\n", LMIC.globalDutyAvail, 0);
 }
