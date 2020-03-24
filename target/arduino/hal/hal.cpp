@@ -60,6 +60,8 @@ static void hal_io_init () {
         pinMode(lmic_pins.rx, OUTPUT);
     if (lmic_pins.rst != LMIC_UNUSED_PIN)
         pinMode(lmic_pins.rst, OUTPUT);
+    if (lmic_pins.busy != LMIC_UNUSED_PIN)
+        pinMode(lmic_pins.busy, INPUT);
     if (lmic_pins.tcxo != LMIC_UNUSED_PIN)
         pinMode(lmic_pins.tcxo, OUTPUT);
 
