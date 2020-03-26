@@ -528,16 +528,16 @@ static void SetCrc16 (uint16_t seed, uint16_t polynomial) {
 
 static uint32_t GetRandom (void) __attribute__((__unused__)); // Ok if unused
 static uint32_t GetRandom (void) {
-    uint8_t buf[4];
+    uint32_t value;
     // continuous rx
     SetRx(0xFFFFFF);
     // wait 1ms
     hal_waitUntil(os_getTime() + ms2osticks(1));
     // read random register
-    ReadRegs(REG_RANDOMNUMBERGEN0, buf, 4);
+    ReadRegs(REG_RANDOMNUMBERGEN0, (uint8_t*)value, 4);
     // standby
     SetStandby(STDBY_RC);
-    return *((uint32_t*) buf);
+    return value;
 }
 
 void radio_sleep (void) {
