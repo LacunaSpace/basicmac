@@ -790,6 +790,8 @@ void radio_init (void) {
 
 // (run by irqjob)
 bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
+    (void)diomask; // unused
+
     uint16_t irqflags = GetIrqStatus();
 
     // dispatch modem

@@ -654,6 +654,8 @@ static void adjustByRxdErr (u1_t rxdelay, u1_t dr) {
     span /= dr2hsym(dr,1); // additional half symbols
     LMIC.rxsyms += (span + 1) >> 1;
     LMIC.rxtime -= span*hsym;
+#else // CFG_testpin
+    (void)rxdelay; (void)dr; // unused
 #endif // CFG_testpin
 }
 
@@ -721,11 +723,13 @@ static void txDelay (ostime_t reftime, u1_t secSpan) {
 
 
 static void setDrJoin (u1_t reason, dr_t dr) {
+    (void)reason; // unused
     LMIC.datarate = dr;
 }
 
 
 static void setDrTxpow (u1_t reason, dr_t dr, s1_t powadj) {
+    (void)reason; // unused
     if( powadj != KEEP_TXPOWADJ )
         LMIC.txPowAdj = powadj;
     if( LMIC.datarate != dr ) {
@@ -1364,6 +1368,7 @@ static ostime_t nextTx_fix (ostime_t now) {
 
 
 static void runEngineUpdate (osjob_t* osjob) {
+    (void)osjob; // unused
     engineUpdate();
 }
 
@@ -1383,6 +1388,7 @@ static void reportEvent (ev_t ev) {
 
 
 static void runReset (osjob_t* osjob) {
+    (void)osjob; // unused
     // Disable session
     LMIC_reset();
     LMIC_startJoining();

@@ -40,6 +40,7 @@ static void radio_stop (void) {
 // protected job - runs with irqs disabled!
 static void radio_irq_timeout (osjob_t* j) {
     BACKTRACE();
+    (void)j; // unused
 
     // stop everything (antenna switch, hal irqs, sleep, irq job)
     radio_stop();
@@ -63,6 +64,7 @@ void radio_set_irq_timeout (ostime_t timeout) {
 
 // (run by irqjob)
 static void radio_irq_func (osjob_t* j) {
+    (void)j; // unused
     // call radio-specific processing function
     if( radio_irq_process(state.irqtime, state.diomask) ) {
 	// current radio operation has completed

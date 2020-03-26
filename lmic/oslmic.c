@@ -55,6 +55,7 @@ u1_t os_getRndU1 (void) {
 }
 
 bit_t os_cca (u2_t rps, u4_t freq) { //XXX:this belongs into os_radio module
+    (void) rps; (void)freq; // unused
     return 0;  // never grant access
 }
 
