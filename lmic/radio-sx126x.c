@@ -203,6 +203,7 @@ static void WriteRegs (uint16_t addr, const uint8_t* data, uint8_t len) {
     hal_spi_select(0);
 }
 
+static void WriteReg (uint16_t addr, uint8_t val) __attribute__((__unused__)); // Ok if this is unused
 static void WriteReg (uint16_t addr, uint8_t val) {
     WriteRegs(addr, &val, 1);
 }
@@ -525,6 +526,7 @@ static void SetCrc16 (uint16_t seed, uint16_t polynomial) {
     WriteRegs(REG_CRCPOLYVALMSB, buf, 2);
 }
 
+static uint32_t GetRandom (void) __attribute__((__unused__)); // Ok if unused
 static uint32_t GetRandom (void) {
     uint8_t buf[4];
     // continuous rx
