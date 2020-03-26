@@ -357,7 +357,7 @@ static void CalibrateImage (uint32_t freq) {
 	{ 863000000, 870000000, { 0xD7, 0xDB } },
 	{ 902000000, 928000000, { 0xE1, 0xE9 } },
     };
-    for (int i = 0; i < sizeof(bands) / sizeof(bands[0]); i++) {
+    for (size_t i = 0; i < sizeof(bands) / sizeof(bands[0]); i++) {
 	if (freq >= bands[i].min && freq <= bands[i].max) {
 	    writecmd(CMD_CALIBRATEIMAGE, bands[i].freq, 2);
 	}

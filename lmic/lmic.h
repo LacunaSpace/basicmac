@@ -150,7 +150,7 @@ enum { MAX_RXSYMS         = 100 };   // stop tracking beacon beyond this
 #define RXDERR_INI 50  // ppm
 #endif
 
-#define LINK_CHECK_OFF  (0x80000000)
+#define LINK_CHECK_OFF  ((s4_t)0x80000000)
 #define LINK_CHECK_INIT (-LMIC.adrAckLimit)
 #define LINK_CHECK_DEAD (LMIC.adrAckDelay)
 

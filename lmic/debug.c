@@ -179,7 +179,7 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
 		    break;
 		}
 		case 'e': { // LMIC event name
-		    int ev = va_arg(arg, int);
+		    unsigned ev = va_arg(arg, unsigned);
 		    const char *evn = (ev < sizeof(evnames)/sizeof(evnames[0]) && evnames[ev]) ? evnames[ev] : "UNKNOWN";
 		    dst += strpad(dst, end - dst, evn, strlen(evn), width, left, ' ');
 		    break;
