@@ -94,7 +94,7 @@ bool hal_pin_rst (u1_t val) {
     return true;
 }
 
-void hal_irqmask_set (int mask) {
+void hal_irqmask_set (int /* mask */) {
     // Not implemented
 }
 
@@ -291,7 +291,7 @@ u1_t hal_sleep (u1_t type, u4_t targettime) {
     return delta_time(targettime) < 10 ? 0 : 1;
 }
 
-void hal_watchcount (int cnt) {
+void hal_watchcount (int /* cnt */) {
     // Not implemented
 }
 
@@ -369,7 +369,7 @@ void hal_printf_init() {
 #endif // !defined(__AVR__)
 #endif // defined(LMIC_PRINTF_TO)
 
-void hal_init (void *bootarg) {
+void hal_init (void * /* bootarg */) {
     // configure radio I/O and interrupt handler
     hal_io_init();
     // configure radio SPI
@@ -404,11 +404,11 @@ u1_t hal_getBattLevel (void) {
     return 0;
 }
 
-void hal_setBattLevel (u1_t level) {
+void hal_setBattLevel (u1_t /* level */) {
     // Not implemented
 }
 
-void hal_fwinfo (hal_fwi* fwi) {
+void hal_fwinfo (hal_fwi* /* fwi */) {
     // Not implemented
 }
 

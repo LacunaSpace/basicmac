@@ -49,9 +49,9 @@ static const u4_t DEVADDR = 0x03FF0001 ; // <-- Change this address for every no
 // These callbacks are only used in over-the-air activation, so they are
 // left empty here (we cannot leave them out completely unless
 // DISABLE_JOIN is set in config.h, otherwise the linker will complain).
-void os_getJoinEui (u1_t* buf) { }
-void os_getDevEui (u1_t* buf) { }
-void os_getNwkKey (u1_t* buf) { }
+void os_getJoinEui (u1_t* /* buf */) { }
+void os_getDevEui (u1_t* /* buf */) { }
+void os_getNwkKey (u1_t* /* buf */) { }
 u1_t os_getRegion (void) { return REGCODE_EU868; }
 
 // Schedule TX every this many milliseconds (might become longer due to duty
