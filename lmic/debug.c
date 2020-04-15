@@ -196,6 +196,14 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
 		    break;
 		case 't': // ostime_t  (hh:mm:ss.mmm, no field padding)
 		case 'T': // osxtime_t (ddd.hh:mm:ss, no field padding)
+		#if defined(CFG_DEBUG_RAW_TIMESTAMPS)
+		    if (c == 't') {
+			longint = 1;
+			base = 10;
+			goto numeric;
+		    }
+		#endif
+
 		    if (end - dst >= 12) {
 			uint64_t t = ((c == 'T') ? va_arg(arg, uint64_t) : va_arg(arg, uint32_t)) * 1000 / OSTICKS_PER_SEC;
 			int ms = t % 1000;
