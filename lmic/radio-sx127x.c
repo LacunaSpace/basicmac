@@ -768,7 +768,7 @@ static void rxlora (bool rxcontinuous) {
         ostime_t rxtime = LMIC.rxtime - LORA_RXSTART_FIXUP;
 	ostime_t now = os_getTime();
 	if( rxtime - now < 0 ) {
-	    debug_printf("WARNING: rxtime is %d ticks in the past! (ramp-up time %d ms / %d ticks)\r\n",
+	    debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
 			 now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
 	}
         hal_waitUntil(rxtime);
@@ -855,7 +855,7 @@ static void rxfsk (bool rxcontinuous) {
 	// busy wait until exact rx time
 	ostime_t now = os_getTime();
 	if (LMIC.rxtime - now < 0) {
-	    debug_printf("WARNING: rxtime is %d ticks in the past! (ramp-up time %d ms / %d ticks)\r\n",
+	    debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
 			 now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
 	}
 	hal_waitUntil(LMIC.rxtime);
