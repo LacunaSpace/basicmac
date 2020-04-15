@@ -16,6 +16,21 @@
 
 #else
 
+#include <limits.h>
+
+// When printing 16-bit values, the code uses %d and friends (which
+// accept an `int`-sized argument). This works, because these arguments
+// are integer-promoted automatically (provided int is at least 16-bits,
+// but the C language requires this
+// When printing 32-bit values, the code uses %ld (which accepts a
+// `long`-sized argument). This only works when `long` is actually
+// 32-bits. This is the case on at least ARM and AVR, but to be sure,
+// check at compiletime. Since there is no portable LONG_WIDTH, we use
+// LONG_MAX instead.
+#if LONG_MAX != ((1 << 31) - 1)
+#error "long is not exactly 32 bits, printing will fail"
+#endif
+
 // write formatted string to buffer
 int debug_snprintf (char *str, int size, const char *format, ...);
 

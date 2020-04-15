@@ -87,14 +87,14 @@ static const char* const evnames[] = {
 
 static int debug_vsnprintf(char *str, int size, const char *format, va_list arg) {
     char c, *dst = str, *end = str + size - 1;
-    int width, left, base, zero, space, plus, prec, sign;
+    int width, left, base, zero, space, plus, prec, sign, longint;
 
     while( (c = *format++) && dst < end ) {
 	if(c != '%') {
 	    *dst++ = c;
 	} else {
 	    // flags
-	    width = prec = left = zero = sign = space = plus = 0;
+	    width = prec = left = zero = sign = space = plus = longint = 0;
 	    while( (c = *format++) ) {
 		if(c == '-') left = 1;
 		else if(c == ' ') space = 1;
@@ -124,6 +124,11 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
 			c = *format++;
 		    }
 		}
+	    }
+	    // length
+	    if(c == 'l') {
+		c = *format++;
+		longint = 1;
 	    }
 	    // conversion specifiers
 	    switch(c) {
@@ -160,7 +165,8 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
 			    prec = width - 1; // have itoa() do the leading zero-padding for correct placement of sign
 			    pad = '0';
 			}
-			int len = itoa(num, va_arg(arg, int), base, prec, 0, 0, sign);
+			u4_t val = longint ? va_arg(arg, long) : va_arg(arg, int);
+			int len = itoa(num, val, base, prec, 0, 0, sign);
 			dst += strpad(dst, end - dst, num, len, width, left, pad);
 			break;
 		    }
