@@ -55,17 +55,17 @@ typedef const char*	str_t;
 extern "C"{
 #endif
 
-#define max(a,b)                                \
+#define os_max(a,b)                             \
     ({  __typeof__ (a) _a = (a);                \
         __typeof__ (b) _b = (b);                \
         _a > _b ? _a : _b; })
 
-#define min(a,b)                                \
+#define os_min(a,b)                             \
     ({  __typeof__ (a) _a = (a);                \
         __typeof__ (b) _b = (b);                \
         _a < _b ? _a : _b; })
 
-#define os_minmax(vmin,v,vmax) (max(vmin,min(v,vmax)))
+#define os_minmax(vmin,v,vmax) (os_max(vmin,os_min(v,vmax)))
 #define os_clearMem(a,b)   memset(a,0,b)
 #define os_copyMem(a,b,c)  memcpy(a,b,c)
 #define os_moveMem(a,b,c)  memmove(a,b,c)

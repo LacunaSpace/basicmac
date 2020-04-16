@@ -956,7 +956,7 @@ static void updateTx_dyn (ostime_t txbeg) {
     u1_t b = freq & BAND_MASK;
     // set frequency/power
     LMIC.freq  = freq & ~BAND_MASK;
-    LMIC.txpow = min(LMIC.txPowAdj + REGION.maxEirp, REGION.bands[b].txpow);
+    LMIC.txpow = os_min(LMIC.txPowAdj + REGION.maxEirp, REGION.bands[b].txpow);
     // Update band duty cycle stats
     osxtime_t xnow = os_getXTime();
     //XXX:TBD: osxtime_t xtxbeg = os_time2XTime(txbeg, os_getXTime());
