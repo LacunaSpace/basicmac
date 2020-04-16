@@ -2479,12 +2479,15 @@ static void buildDataFrame (void) {
     int foptslen = end - OFF_DAT_OPTS;
 
     if( foptslen && txdata && LMIC.pendTxPort == 0 ) {
+        debug_printf("Payload and MAC commands on port 0, sending only MAC commands\n");
         // app layer wants to transmit on port 0, but we have fopts
         txdata = 0;
         LMIC.txrxFlags |= TXRX_NOTX;
     }
 
-    if( foptslen > 15 ) {
+    int foptslen_max = 15;
+    if( foptslen > foptslen_max ) {
+        debug_printf("MAC commands large (%u > %u), sending only MAC commands\n", foptslen, foptslen_max);
         // too big for FOpts, send as MAC frame with port=0 (cancels application payload)
         memcpy(LMIC.pendTxData, LMIC.frame+OFF_DAT_OPTS, foptslen);
         dlen = foptslen;
@@ -2506,11 +2509,13 @@ again:
         if( txdata ) {
             if( LMIC.pendTxPort ) {
                 if( foptslen ) {
+                    debug_printf("Frame too large (%u > %u), sending only MAC commands\n", flen, flen_max);
                     // cancel application payload
                     txdata = 0;
                     LMIC.txrxFlags |= TXRX_NOTX;
                     goto again;
                 } else {
+                    debug_printf("Frame too large (%u > %u), not sending\n", flen, flen_max);
                     // cancel transmission completely
                     LMIC.dataLen = 0;
                     return;
@@ -3048,11 +3053,13 @@ static void engineUpdate (void) {
                     // Imminent roll over - proactively reset MAC
                     // Device has to react! NWK will not roll over and just stop sending.
                     // Thus, we have N frames to detect a possible lock up.
+                    debug_printf("Down FCNT about to rollover (0x%lx), resetting session\n", LMIC.seqnoDn);
                   reset:
                     os_setCallback(&LMIC.osjob, FUNC_ADDR(runReset));
                     return;
                 }
                 if( (LMIC.txCnt==0 && LMIC.seqnoUp == 0xFFFFFFFF) ) {
+                    debug_printf("Up FCNT about to rollover (0x%lx), resetting session\n", LMIC.seqnoUp);
                     // Roll over of up seq counter
                     // Do not run RESET event callback from here!
                     // App code might do some stuff after send unaware of RESET.
@@ -3061,6 +3068,7 @@ static void engineUpdate (void) {
                 LMIC.txrxFlags = 0;
                 buildDataFrame();
                 if( LMIC.dataLen == 0 ) {
+                    debug_printf("Zero data length, not sending\n");
                     txError();
                     return;
                 }
