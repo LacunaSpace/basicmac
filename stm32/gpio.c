@@ -8,9 +8,9 @@
 static inline void gpio_begin (int port) {
     unsigned int enr = GPIO_RCC_ENR;
     if ((enr & GPIO_EN(port)) == 0) {
-	GPIO_RCC_ENR = enr | GPIO_EN(port);
-	// dummy read as per errata
-	(void) GPIOx(port)->IDR;
+        GPIO_RCC_ENR = enr | GPIO_EN(port);
+        // dummy read as per errata
+        (void) GPIOx(port)->IDR;
     }
 }
 
@@ -74,10 +74,10 @@ void gpio_cfg_extirq_ex (int port, int pin, bool rising, bool falling) {
     EXTI->RTSR &= ~mask; // clear trigger
     EXTI->FTSR &= ~mask; // clear trigger
     if( rising ) {
-	EXTI->RTSR |= mask;
+        EXTI->RTSR |= mask;
     }
     if( falling ) {
-	EXTI->FTSR |= mask;
+        EXTI->FTSR |= mask;
     }
 
     // configure the NVIC
@@ -99,10 +99,10 @@ void gpio_cfg_extirq (int port, int pin, int irqcfg) {
 
 void gpio_set_extirq (int pin, int on) {
     if (on) {
-	EXTI->PR = (1 << pin);
-	EXTI->IMR |= (1 << pin);
+        EXTI->PR = (1 << pin);
+        EXTI->IMR |= (1 << pin);
     } else {
-	EXTI->IMR &= ~(1 << pin);
+        EXTI->IMR &= ~(1 << pin);
     }
 }
 

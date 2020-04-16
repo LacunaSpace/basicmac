@@ -48,7 +48,7 @@ static void add (ptime* ppt, uint64_t uaticks) {
     uint32_t uah = uaticks / (OSTICKS_PER_SEC * 60  * 60);
     if( uah != 0 ) {
         ppt->hr += uah;
-	uaticks -= ((int64_t) uah * (OSTICKS_PER_SEC * 60 * 60));
+        uaticks -= ((int64_t) uah * (OSTICKS_PER_SEC * 60 * 60));
     }
     ppt->ticks = uaticks;
 }

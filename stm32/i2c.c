@@ -8,10 +8,10 @@
 #ifdef BRD_I2C
 
 #if BRD_I2C == 1
-#define I2Cx		I2C1
-#define I2Cx_enable()	do { RCC->APB1ENR |= RCC_APB1ENR_I2C1EN; } while (0)
-#define I2Cx_disable()	do { RCC->APB1ENR &= ~RCC_APB1ENR_I2C1EN; } while (0)
-#define I2Cx_IRQn	I2C1_IRQn
+#define I2Cx            I2C1
+#define I2Cx_enable()   do { RCC->APB1ENR |= RCC_APB1ENR_I2C1EN; } while (0)
+#define I2Cx_disable()  do { RCC->APB1ENR &= ~RCC_APB1ENR_I2C1EN; } while (0)
+#define I2Cx_IRQn       I2C1_IRQn
 #else
 #error "Unsupported I2C peripheral"
 #endif
@@ -47,9 +47,9 @@ static void i2c_stop (int status) {
     // schedule callback
     *(xfr.pstatus) = status;
     if (xfr.job != NULL) {
-	os_setCallback(xfr.job, xfr.cb);
+        os_setCallback(xfr.job, xfr.cb);
     } else {
-	xfr.cb(NULL);
+        xfr.cb(NULL);
     }
     // re-enable sleep
     hal_clearMaxSleep(HAL_SLEEP_S0);
@@ -75,47 +75,47 @@ static void i2c_start (int addr) {
 
 static void i2c_cont (void) {
     if (xfr.wlen) {
-	// calculate length; TODO: handle >255
-	int n = xfr.wlen & 0xff;
-	xfr.wlen -= n;
-	// set direction & number of bytes
-	I2Cx->CR2 = (I2Cx->CR2 & ~(I2C_CR2_RD_WRN | I2C_CR2_NBYTES)) | (n << 16);
-	// enable interrupts
-	I2Cx->CR1 = (I2Cx->CR1 & ~0xfe) | I2C_CR1_TXIE | I2C_CR1_TCIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
-	// start TX
-	I2Cx->CR2 |= I2C_CR2_START;
+        // calculate length; TODO: handle >255
+        int n = xfr.wlen & 0xff;
+        xfr.wlen -= n;
+        // set direction & number of bytes
+        I2Cx->CR2 = (I2Cx->CR2 & ~(I2C_CR2_RD_WRN | I2C_CR2_NBYTES)) | (n << 16);
+        // enable interrupts
+        I2Cx->CR1 = (I2Cx->CR1 & ~0xfe) | I2C_CR1_TXIE | I2C_CR1_TCIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
+        // start TX
+        I2Cx->CR2 |= I2C_CR2_START;
     } else if (xfr.rlen) {
-	// calculate length; TODO: handle >255
-	int n = xfr.rlen & 0xff;
-	xfr.rlen -= n;
-	// set direction & number of bytes
-	I2Cx->CR2 = (I2Cx->CR2 & ~(I2C_CR2_RD_WRN | I2C_CR2_NBYTES)) | I2C_CR2_RD_WRN | (n << 16);
-	// enable interrupts
-	I2Cx->CR1 = (I2Cx->CR1 & ~0xfe) | I2C_CR1_RXIE | I2C_CR1_TCIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
-	// start RX
-	I2Cx->CR2 |= I2C_CR2_START;
+        // calculate length; TODO: handle >255
+        int n = xfr.rlen & 0xff;
+        xfr.rlen -= n;
+        // set direction & number of bytes
+        I2Cx->CR2 = (I2Cx->CR2 & ~(I2C_CR2_RD_WRN | I2C_CR2_NBYTES)) | I2C_CR2_RD_WRN | (n << 16);
+        // enable interrupts
+        I2Cx->CR1 = (I2Cx->CR1 & ~0xfe) | I2C_CR1_RXIE | I2C_CR1_TCIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
+        // start RX
+        I2Cx->CR2 |= I2C_CR2_START;
     } else {
-	// done
-	i2c_stop(I2C_OK);
+        // done
+        i2c_stop(I2C_OK);
     }
 }
 
 void i2c_irq (void) {
     unsigned int isr = I2Cx->ISR;
     if (isr & I2C_ISR_NACKF) {
-	// NACK detected, transfer failed!
-	i2c_stop(I2C_NAK);
+        // NACK detected, transfer failed!
+        i2c_stop(I2C_NAK);
     } else if (isr & I2C_ISR_TC) {
-	// transfer complete, move on
-	i2c_cont();
+        // transfer complete, move on
+        i2c_cont();
     } else if (isr & I2C_ISR_TXIS) {
-	// write next byte
-	I2Cx->TXDR = *xfr.wptr++;
+        // write next byte
+        I2Cx->TXDR = *xfr.wptr++;
     } else if (isr & I2C_ISR_RXNE) {
-	// next byte received
-	*xfr.rptr++ = I2Cx->RXDR;
+        // next byte received
+        *xfr.rptr++ = I2Cx->RXDR;
     } else {
-	hal_failed(); // XXX
+        hal_failed(); // XXX
     }
 }
 
@@ -124,7 +124,7 @@ static void i2c_timeout (osjob_t* job) {
 }
 
 void i2c_xfer_ex (unsigned int addr, unsigned char* buf, unsigned int wlen, unsigned int rlen, ostime_t timeout,
-	osjob_t* job, osjobcb_t cb, int* pstatus) {
+        osjob_t* job, osjobcb_t cb, int* pstatus) {
     // setup xfr structure
     xfr.wlen = wlen;
     xfr.rlen = rlen;
@@ -135,7 +135,7 @@ void i2c_xfer_ex (unsigned int addr, unsigned char* buf, unsigned int wlen, unsi
     *xfr.pstatus = I2C_BUSY;
     // set timeout
     if (timeout) {
-	os_setTimedCallback(job, os_getTime() + timeout, i2c_timeout);
+        os_setTimedCallback(job, os_getTime() + timeout, i2c_timeout);
     }
     // prepare peripheral
     i2c_start(addr);

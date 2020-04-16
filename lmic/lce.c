@@ -21,17 +21,17 @@ bool lce_processJoinAccept (u1_t* jacc, u1_t jacclen, u2_t devnonce) {
 #if defined(CFG_lorawan11)
     u1_t optneg = jacc[OFF_JA_DLSET] & JA_DLS_OPTNEG;
     if( optneg ) {
-	os_moveMem(jacc+OFF_JA_JOINNONCE+2, jacc+OFF_JA_JOINNONCE, jacclen-OFF_JA_JOINNONCE);
-	os_wlsbf2(jacc+OFF_JA_JOINNONCE, devnonce);
-	jacclen += 2;
+        os_moveMem(jacc+OFF_JA_JOINNONCE+2, jacc+OFF_JA_JOINNONCE, jacclen-OFF_JA_JOINNONCE);
+        os_wlsbf2(jacc+OFF_JA_JOINNONCE, devnonce);
+        jacclen += 2;
     }
 #endif
     os_getNwkKey(AESkey);
     u4_t mic2 = os_aes(AES_MIC|AES_MICNOAUX, jacc, jacclen);
 #if defined(CFG_lorawan11)
     if( optneg ) {  // Restore orig frame
-	jacclen -= 2;
-	os_moveMem(jacc+OFF_JA_JOINNONCE, jacc+OFF_JA_JOINNONCE+2, jacclen-OFF_JA_JOINNONCE);
+        jacclen -= 2;
+        os_moveMem(jacc+OFF_JA_JOINNONCE, jacc+OFF_JA_JOINNONCE+2, jacclen-OFF_JA_JOINNONCE);
         os_wlsbf4(jacc+jacclen, mic1);
     }
 #endif
@@ -54,12 +54,12 @@ bool lce_processJoinAccept (u1_t* jacc, u1_t jacclen, u2_t devnonce) {
     os_aes(AES_ENC, nwkskey, 16);
 #if defined(CFG_lorawan11)
     if( optneg ) {
-	os_getNwkKey(AESkey);
-	os_aes(AES_ENC, LMIC.lceCtx.nwkSKeyDn, 16);
-	os_getAppKey(AESkey);
+        os_getNwkKey(AESkey);
+        os_aes(AES_ENC, LMIC.lceCtx.nwkSKeyDn, 16);
+        os_getAppKey(AESkey);
     } else {
-	os_copyMem(LMIC.lceCtx.nwkSKeyDn, nwkskey, 16);
-	os_getNwkKey(AESkey);
+        os_copyMem(LMIC.lceCtx.nwkSKeyDn, nwkskey, 16);
+        os_getNwkKey(AESkey);
     }
 #else
     os_getNwkKey(AESkey);
@@ -131,7 +131,7 @@ u4_t lce_micKey0 (u4_t devaddr, u4_t seqno, u1_t* pdu, int len) {
 
 void lce_cipher (s1_t keyid, u4_t devaddr, u4_t seqno, int cat, u1_t* payload, int len) {
     if(len <= 0 || (cat==LCE_SCC_UP && (LMIC.opmode & OP_NOCRYPT)) ) {
-	return;
+        return;
     }
     const u1_t* key;
     if( keyid == LCE_NWKSKEY ) {

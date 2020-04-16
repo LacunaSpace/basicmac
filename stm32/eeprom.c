@@ -32,7 +32,7 @@ void eeprom_write (void* dest, unsigned int val) {
         FLASH->PECR |= FLASH_PECR_PELOCK;
 
         // verify value
-	ASSERT( *((volatile u4_t*) addr) == val );
+        ASSERT( *((volatile u4_t*) addr) == val );
     }
 }
 

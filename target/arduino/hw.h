@@ -33,8 +33,8 @@
 
 
 #define PERIPH_USART
-#define USART_BR_9600	9600
-#define USART_BR_115200	115200
+#define USART_BR_9600   9600
+#define USART_BR_115200 115200
 
 #define PERIPH_PIO
 #define PIO_IRQ_LINE(gpio) (gpio)

@@ -15,13 +15,13 @@ void _start (boot_boottab* boottab) {
     uint32_t* src = &_sidata;
     uint32_t* dst = &_sdata;
     while( dst < &_edata ) {
-	*dst++ = *src++;
+        *dst++ = *src++;
     }
 
     // initialize bss
     dst = &_sbss;
     while( dst < &_ebss ) {
-	*dst++ = 0;
+        *dst++ = 0;
     }
 
     // call main function

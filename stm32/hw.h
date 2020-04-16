@@ -79,63 +79,63 @@ enum { GPIO_LOHI = 0, GPIO_HILO = 1 };
 // generate a transition, then switch to HiZ
 int gpio_transition (int port, int pin, int type, int duration, unsigned int config);
 
-#define GPIO_DEFAULT_CFG	(GPIOCFG_MODE_ANA | GPIOCFG_OSPEED_400kHz | GPIOCFG_OTYPE_OPEN | GPIOCFG_PUPD_NONE)
-#define SET_PIN(gpio, val)	gpio_set_pin(BRD_PORT(gpio), BRD_PIN(gpio), (val))
-#define GET_PIN(gpio)		gpio_get_pin(BRD_PORT(gpio), BRD_PIN(gpio))
-#define CFG_PIN(gpio, opts)	gpio_cfg_pin(BRD_PORT(gpio), BRD_PIN(gpio), (opts))
-#define CFG_PIN_VAL(gpio, o, s)	gpio_cfg_set_pin(BRD_PORT(gpio), BRD_PIN(gpio), (o), (s))
-#define CFG_PIN_AF(gpio, opts)	gpio_cfg_pin(BRD_PORT(gpio), BRD_PIN(gpio), GPIOCFG_MODE_ALT | BRD_AF(gpio) | (opts))
-#define CFG_PIN_DEFAULT(gpio)	gpio_cfg_pin(BRD_PORT(gpio), BRD_PIN(gpio), GPIO_DEFAULT_CFG)
-#define IRQ_PIN(gpio, opts)	gpio_cfg_extirq(BRD_PORT(gpio), BRD_PIN(gpio), (opts))
-#define IRQ_PIN_SET(gpio, on)	gpio_set_extirq(BRD_PIN(gpio), (on))
-#define TXN_PIN(gpio, t, d, c)	gpio_transition(BRD_PORT(gpio), BRD_PIN(gpio), (t), (d), (c))
+#define GPIO_DEFAULT_CFG        (GPIOCFG_MODE_ANA | GPIOCFG_OSPEED_400kHz | GPIOCFG_OTYPE_OPEN | GPIOCFG_PUPD_NONE)
+#define SET_PIN(gpio, val)      gpio_set_pin(BRD_PORT(gpio), BRD_PIN(gpio), (val))
+#define GET_PIN(gpio)           gpio_get_pin(BRD_PORT(gpio), BRD_PIN(gpio))
+#define CFG_PIN(gpio, opts)     gpio_cfg_pin(BRD_PORT(gpio), BRD_PIN(gpio), (opts))
+#define CFG_PIN_VAL(gpio, o, s) gpio_cfg_set_pin(BRD_PORT(gpio), BRD_PIN(gpio), (o), (s))
+#define CFG_PIN_AF(gpio, opts)  gpio_cfg_pin(BRD_PORT(gpio), BRD_PIN(gpio), GPIOCFG_MODE_ALT | BRD_AF(gpio) | (opts))
+#define CFG_PIN_DEFAULT(gpio)   gpio_cfg_pin(BRD_PORT(gpio), BRD_PIN(gpio), GPIO_DEFAULT_CFG)
+#define IRQ_PIN(gpio, opts)     gpio_cfg_extirq(BRD_PORT(gpio), BRD_PIN(gpio), (opts))
+#define IRQ_PIN_SET(gpio, on)   gpio_set_extirq(BRD_PIN(gpio), (on))
+#define TXN_PIN(gpio, t, d, c)  gpio_transition(BRD_PORT(gpio), BRD_PIN(gpio), (t), (d), (c))
 
 #define SET_PIN_ONOFF(gpio, on) gpio_set_pin(BRD_PORT(gpio), BRD_PIN(gpio), (((gpio) & BRD_GPIO_ACTIVE_LOW) ? 1 : 0) ^ ((on) ? 1 : 0))
 
 // Convenience macros to set GPIO configuration registers
-#define GPIO_AF_BITS		4		// width of bit field
-#define GPIO_AF_MASK		0x0F		// mask in AFR[0/1]
-#define GPIO_AFRLR(i)		((i) >> 3)
-#define GPIO_AF_PINi(i,af)	((af) << (((i) & 7) * GPIO_AF_BITS))
-#define GPIO_AF_set(p,i,af)	do { \
+#define GPIO_AF_BITS            4               // width of bit field
+#define GPIO_AF_MASK            0x0F            // mask in AFR[0/1]
+#define GPIO_AFRLR(i)           ((i) >> 3)
+#define GPIO_AF_PINi(i,af)      ((af) << (((i) & 7) * GPIO_AF_BITS))
+#define GPIO_AF_set(p,i,af)     do { \
     (p)->AFR[GPIO_AFRLR(i)] = ((p)->AFR[GPIO_AFRLR(i)] \
-	    & ~GPIO_AF_PINi(i, GPIO_AF_MASK)) | GPIO_AF_PINi(i, af); \
+            & ~GPIO_AF_PINi(i, GPIO_AF_MASK)) | GPIO_AF_PINi(i, af); \
 } while (0)
-#define HW_CFG_PIN(p,i,cfg)	do { \
+#define HW_CFG_PIN(p,i,cfg)     do { \
     if (((cfg) & GPIOCFG_MODE_MASK) == GPIOCFG_MODE_ALT) { \
-	GPIO_AF_set(p, i, (cfg) & GPIOCFG_AF_MASK); \
-	(p)->MODER = ((p)->MODER   & ~(3 << (2*(i)))) | ((((cfg) >> GPIOCFG_MODE_SHIFT  ) & 3) << (2*(i))); \
+        GPIO_AF_set(p, i, (cfg) & GPIOCFG_AF_MASK); \
+        (p)->MODER = ((p)->MODER   & ~(3 << (2*(i)))) | ((((cfg) >> GPIOCFG_MODE_SHIFT  ) & 3) << (2*(i))); \
     } \
     (p)->OSPEEDR   = ((p)->OSPEEDR & ~(3 << (2*(i)))) | ((((cfg) >> GPIOCFG_OSPEED_SHIFT) & 3) << (2*(i))); \
     (p)->OTYPER    = ((p)->OTYPER  & ~(1 << (1*(i)))) | ((((cfg) >> GPIOCFG_OTYPE_SHIFT ) & 1) << (1*(i))); \
     (p)->PUPDR     = ((p)->PUPDR   & ~(3 << (2*(i)))) | ((((cfg) >> GPIOCFG_PUPD_SHIFT  ) & 3) << (2*(i))); \
     if (((cfg) & GPIOCFG_MODE_MASK) != GPIOCFG_MODE_ALT) { \
-	(p)->MODER = ((p)->MODER   & ~(3 << (2*(i)))) | ((((cfg) >> GPIOCFG_MODE_SHIFT  ) & 3) << (2*(i))); \
+        (p)->MODER = ((p)->MODER   & ~(3 << (2*(i)))) | ((((cfg) >> GPIOCFG_MODE_SHIFT  ) & 3) << (2*(i))); \
     } \
 } while (0)
-#define HW_SET_PIN(p,i,state)	do { \
+#define HW_SET_PIN(p,i,state)   do { \
     (p)->BSRR |= (1 << (i + ((state) ? 0 : 16))); \
 } while (0)
-#define HW_GET_PIN(p,i)		((p)->IDR & (1 << (i)))
+#define HW_GET_PIN(p,i)         ((p)->IDR & (1 << (i)))
 
 // Theses macros manipulate the GPIO registers directly, without generating a function call
-#define SET_PIN_DIRECT(gpio, val)	HW_SET_PIN(GPIOx(BRD_PORT(gpio)), BRD_PIN(gpio), (val))
-#define GET_PIN_DIRECT(gpio)		HW_GET_PIN(GPIOx(BRD_PORT(gpio)), BRD_PIN(gpio))
-#define CFG_PIN_DIRECT(gpio, opts)	HW_CFG_PIN(GPIOx(BRD_PORT(gpio)), BRD_PIN(gpio), (opts))
+#define SET_PIN_DIRECT(gpio, val)       HW_SET_PIN(GPIOx(BRD_PORT(gpio)), BRD_PIN(gpio), (val))
+#define GET_PIN_DIRECT(gpio)            HW_GET_PIN(GPIOx(BRD_PORT(gpio)), BRD_PIN(gpio))
+#define CFG_PIN_DIRECT(gpio, opts)      HW_CFG_PIN(GPIOx(BRD_PORT(gpio)), BRD_PIN(gpio), (opts))
 
 // Determine RCC enable bit for GPIO port
 #if defined(STM32L0)
-#define GPIO_RCC_ENR	(RCC->IOPENR)
-#define GPIO_EN(gpio)	(((gpio) == PORT_A) ? RCC_IOPENR_GPIOAEN \
-	: ((gpio) == PORT_B) ? RCC_IOPENR_GPIOBEN \
-	: ((gpio) == PORT_C) ? RCC_IOPENR_GPIOCEN \
-	: 0)
+#define GPIO_RCC_ENR    (RCC->IOPENR)
+#define GPIO_EN(gpio)   (((gpio) == PORT_A) ? RCC_IOPENR_GPIOAEN \
+        : ((gpio) == PORT_B) ? RCC_IOPENR_GPIOBEN \
+        : ((gpio) == PORT_C) ? RCC_IOPENR_GPIOCEN \
+        : 0)
 #elif defined(STM32L1)
-#define GPIO_RCC_ENR	(RCC->AHBENR)
-#define GPIO_EN(gpio)	(((gpio) == PORT_A) ? RCC_AHBENR_GPIOAEN \
-	: ((gpio) == PORT_B) ? RCC_AHBENR_GPIOBEN \
-	: ((gpio) == PORT_C) ? RCC_AHBENR_GPIOCEN \
-	: 0)
+#define GPIO_RCC_ENR    (RCC->AHBENR)
+#define GPIO_EN(gpio)   (((gpio) == PORT_A) ? RCC_AHBENR_GPIOAEN \
+        : ((gpio) == PORT_B) ? RCC_AHBENR_GPIOBEN \
+        : ((gpio) == PORT_C) ? RCC_AHBENR_GPIOCEN \
+        : 0)
 #endif
 
 
@@ -154,13 +154,13 @@ int gpio_transition (int port, int pin, int type, int duration, unsigned int con
 #define UNIQUE_ID2 (UNIQUE_ID_BASE+0x14)
 
 // EEPROM (these macros are addresses, type uint32_t)
-#define EEPROM_BASE	DATA_EEPROM_BASE
+#define EEPROM_BASE     DATA_EEPROM_BASE
 #ifdef DATA_EEPROM_BANK2_END
-#define EEPROM_END	(DATA_EEPROM_BANK2_END + 1)
+#define EEPROM_END      (DATA_EEPROM_BANK2_END + 1)
 #else
-#define EEPROM_END	DATA_EEPROM_END
+#define EEPROM_END      DATA_EEPROM_END
 #endif
-#define EEPROM_SZ	(EEPROM_END - EEPROM_BASE)
+#define EEPROM_SZ       (EEPROM_END - EEPROM_BASE)
 
 // EEPROM layout for STM32
 
@@ -218,11 +218,11 @@ int gpio_transition (int port, int pin, int type, int duration, unsigned int con
 #define PERIPH_USART
 
 #if (BRD_USART & BRD_LPUART(0)) == 0
-#define USART_BR_9600	0xd05
-#define USART_BR_115200	0x116
+#define USART_BR_9600   0xd05
+#define USART_BR_115200 0x116
 #else
-#define USART_BR_9600	0xd0555
-#define USART_BR_115200	0x115c7
+#define USART_BR_9600   0xd0555
+#define USART_BR_115200 0x115c7
 #endif
 
 
@@ -246,8 +246,8 @@ u1_t spi_xfer (u1_t out);
 
 #define PERIPH_FLASH
 
-#define FLASH_PAGE_SZ		128
-#define FLASH_PAGE_NW		(FLASH_PAGE_SZ >> 2)
+#define FLASH_PAGE_SZ           128
+#define FLASH_PAGE_NW           (FLASH_PAGE_SZ >> 2)
 
 #ifdef FLASH_END
 #undef FLASH_END         // already defined by some STM32L0XXXxx header files

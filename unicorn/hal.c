@@ -202,10 +202,10 @@ void radio_init (bool calibrate) {
 
 static ostime_t syms2ticks (rps_t rps, int n) {
     if( getSf(rps) == FSK ) {
-	// rough estimate of FSK @ 50kBit/s
+        // rough estimate of FSK @ 50kBit/s
         int extra = 5+3+1+2;                     // preamble, syncword, len, crc
-	double us = ((n+extra) * 8e6 / 50e3);    // bits * (us/sec) / Bit/s
-	return (ostime_t)(us * OSTICKS_PER_SEC / 1e6);
+        double us = ((n+extra) * 8e6 / 50e3);    // bits * (us/sec) / Bit/s
+        return (ostime_t)(us * OSTICKS_PER_SEC / 1e6);
     }
     double Rs = (double) ((1<<getBw(rps))*125000) / (1<<(getSf(rps)+(7-SF7)));
     double Ts = 1 / Rs;
@@ -219,7 +219,7 @@ static void txdone (osjob_t* osjob) {
                  ticks2time(pctx->txframe.xbeg), pctx->txframe.xbeg,
                  ticks2time(pctx->txframe.xend), pctx->txframe.xend, enow, now);
     pctx->txfunc(pctx, pctx->txframe.frame, pctx->txframe.flen, pctx->txframe.freq, pctx->txframe.rps,
-		 ticks2time(pctx->txframe.xbeg), ticks2time(pctx->txframe.xend));
+                 ticks2time(pctx->txframe.xbeg), ticks2time(pctx->txframe.xend));
 #endif
     svc(SVC_TX, (uint32_t) &sim.tx, 0, 0);
     os_setTimedCallback(&LMIC.osjob, LMIC.txend + us2osticks(43), LMIC.osjob.func);
@@ -330,14 +330,14 @@ void os_radio (u1_t mode) {
     }
 #endif
     switch (mode) {
-	case RADIO_STOP:
+        case RADIO_STOP:
             os_clearCallback(&sim.rjob);
             break;
-	case RADIO_TX:
+        case RADIO_TX:
             tx();
             break;
 
-	case RADIO_RX:
+        case RADIO_RX:
             rx();
             break;
 
@@ -345,14 +345,14 @@ void os_radio (u1_t mode) {
             LMIC.rssi = -127;
             break;
 
-	case RADIO_RXON:
+        case RADIO_RXON:
             rxon(&sim.rjob);
             break;
 
-	case RADIO_INIT:
+        case RADIO_INIT:
             break;
 
-	case RADIO_CAD:
+        case RADIO_CAD:
             // Turn on CAD and optionally RX a frame
             //  - if no activity or RX frame failed set LMIC.dataLen = 0
             //  - if activity detected start RX of a frame

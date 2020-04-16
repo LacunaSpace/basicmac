@@ -43,8 +43,8 @@ void hal_rtstats_collect (hal_rtstats* stats);
 
 // NVIC interrupt definition
 typedef struct {
-    uint32_t	num;		// NVIC interrupt number
-    void*	handler;	// Pointer to handler function
+    uint32_t    num;            // NVIC interrupt number
+    void*       handler;        // Pointer to handler function
 } irqdef;
 
 extern const irqdef HAL_irqdefs[];

@@ -25,20 +25,20 @@ void _start (boot_boottab* boottab) {
     uint32_t* src = &_sidata;
     uint32_t* dst = &_sdata;
     while( dst < &_edata ) {
-	*dst++ = *src++;
+        *dst++ = *src++;
     }
 
     // initialize bss
     dst = &_sbss;
     while( dst < &_ebss ) {
-	*dst++ = 0;
+        *dst++ = 0;
     }
 
     // copy current Cortex M IRQ + NVIC vector to RAM
     src = (uint32_t*) 0;
     dst = irqvector;
     for( int i = 0; i < (16 + MAX_IRQn); i++ ) {
-	*dst++ = *src++;
+        *dst++ = *src++;
     }
     // fix-up NVIC vector with handlers from firmware
     for( const irqdef* id = HAL_irqdefs; id->handler; id++ ) {

@@ -9,23 +9,23 @@
 DECL_ON_LMIC_EVENT;
 
 enum {
-    FLAG_MODESWITCH	= (1 << 0),	// mode switch pending
-    FLAG_BUSY		= (1 << 1),	// radio is busy
-    FLAG_JOINING	= (1 << 2),	// trying to join
-    FLAG_SHUTDOWN 	= (1 << 3),	// shutdown reqested
+    FLAG_MODESWITCH     = (1 << 0),     // mode switch pending
+    FLAG_BUSY           = (1 << 1),     // radio is busy
+    FLAG_JOINING        = (1 << 2),     // trying to join
+    FLAG_SHUTDOWN       = (1 << 3),     // shutdown reqested
 };
 
 static struct {
-    unsigned int flags;		// flags (FLAG_*)
-    unsigned int mode;		// current mode (LWM_MODE_*)
-    unsigned int nextmode;	// next mode (if FLAG_MODESWITCH is set)
+    unsigned int flags;         // flags (FLAG_*)
+    unsigned int mode;          // current mode (LWM_MODE_*)
+    unsigned int nextmode;      // next mode (if FLAG_MODESWITCH is set)
 
-    lwm_job* queue;		// job queue head
+    lwm_job* queue;             // job queue head
     unsigned int runprio;       // minimum priority level for runnning jobs
-    lwm_complete completefunc;	// current job completion function
-    osjob_t job;		// tx opportunity job
+    lwm_complete completefunc;  // current job completion function
+    osjob_t job;                // tx opportunity job
 
-    unsigned int jcnt;		// join attempt counter
+    unsigned int jcnt;          // join attempt counter
 
     struct {
         bool use_profile;       // Use ADR profile instead of network-managed
@@ -37,21 +37,21 @@ static struct {
 
 #ifdef LWM_SLOTTED
     struct {
-        ostime_t interval;	// beacon interval
-        u4_t freq;		// beacon frequency
-        dr_t dndr;		// beacon datarate
+        ostime_t interval;      // beacon interval
+        u4_t freq;              // beacon frequency
+        dr_t dndr;              // beacon datarate
 
-        u1_t slotsz;		// slot size (payload length in bytes)
-        ostime_t t_slots;	// time span available for uplink slots
-        ostime_t off_slots;	// offset to first slot relative to beacon start
+        u1_t slotsz;            // slot size (payload length in bytes)
+        ostime_t t_slots;       // time span available for uplink slots
+        ostime_t off_slots;     // offset to first slot relative to beacon start
 
-        ostime_t nextrx;	// time of next beacon
+        ostime_t nextrx;        // time of next beacon
 
-        int missed;		// number of missed beacons
-        int missed_max;		// max. number of missed beacons before going back to scanning
+        int missed;             // number of missed beacons
+        int missed_max;         // max. number of missed beacons before going back to scanning
 
-        int timeouts;		// number of beacon scan timeouts
-        int timeouts_max;	// max. number of beacon scan timeouts before creating an unaligned TX opportunity
+        int timeouts;           // number of beacon scan timeouts
+        int timeouts_max;       // max. number of beacon scan timeouts before creating an unaligned TX opportunity
     } bcn;
 #endif
 } state;
@@ -253,13 +253,13 @@ static void reschedule_join (void) {
     os_setApproxTimedCallback(&state.job,
             os_getTime() + (
 #if defined(CFG_eu868) || defined(CFG_in865)
-                (state.jcnt < 10) ? sec2osticks(360) :	// first hour:    every 6 minutes
-                (state.jcnt < 20) ? sec2osticks(3600) :	// next 10 hours: every hour
-                sec2osticks(3600 * 12)			// after:         every 12 hours
+                (state.jcnt < 10) ? sec2osticks(360) :  // first hour:    every 6 minutes
+                (state.jcnt < 20) ? sec2osticks(3600) : // next 10 hours: every hour
+                sec2osticks(3600 * 12)                  // after:         every 12 hours
 #elif defined(CFG_us915)
-                (state.jcnt < 6) ? sec2osticks(600) :	// first hour:    every 10 minutes
-                (state.jcnt < 12) ? sec2osticks(6000) :	// next 10 hours: every 100 minutes
-                sec2osticks(3600 * 12)			// after:         every 12 hours
+                (state.jcnt < 6) ? sec2osticks(600) :   // first hour:    every 10 minutes
+                (state.jcnt < 12) ? sec2osticks(6000) : // next 10 hours: every 100 minutes
+                sec2osticks(3600 * 12)                  // after:         every 12 hours
 #else
 #warning "Unsupported region"
                 sec2osticks(3600)
@@ -301,7 +301,7 @@ static bool mode_switch (void) {
 #ifdef LWM_SLOTTED
             else if (state.nextmode == LWM_MODE_SLOTTED) {
                 debug_printf("slotted\r\n");
-                state.bcn.missed = state.bcn.missed_max;	// start with scanning
+                state.bcn.missed = state.bcn.missed_max;        // start with scanning
                 state.bcn.timeouts = 0;
                 if (!(state.flags & (FLAG_BUSY | FLAG_JOINING))) {
                     bcn_continue();
@@ -433,7 +433,7 @@ DECL_ON_LMIC_EVENT {
     if (e == EV_TXCOMPLETE || e == EV_RXCOMPLETE) {
         if ((LMIC.txrxFlags & TXRX_PORT) && LMIC.frame[LMIC.dataBeg-1]) {
             SVCHOOK_lwm_downlink(LMIC.frame[LMIC.dataBeg-1],
-				 LMIC.frame + LMIC.dataBeg, LMIC.dataLen, LMIC.txrxFlags & LWM_FLAG_MASK);
+                                 LMIC.frame + LMIC.dataBeg, LMIC.dataLen, LMIC.txrxFlags & LWM_FLAG_MASK);
         }
     }
 

@@ -140,7 +140,7 @@ enum {
 #define MAX_FIX_CHNLS_500 0
 #endif
 
-#define MAX_FIX_CHNLS	(MAX_FIX_CHNLS_125 + MAX_FIX_CHNLS_500)
+#define MAX_FIX_CHNLS   (MAX_FIX_CHNLS_125 + MAX_FIX_CHNLS_500)
 
 #endif
 

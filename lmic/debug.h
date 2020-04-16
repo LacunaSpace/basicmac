@@ -9,11 +9,11 @@
 
 #ifndef CFG_DEBUG
 
-#define debug_snprintf(s,n,f,...)	do { } while (0)
-#define debug_printf(f,...)		do { } while (0)
-#define debug_str(s)			do { } while (0)
-#define debug_led(val)			do { } while (0)
-#define debug_verbose_printf(f,...)		do { } while (0)
+#define debug_snprintf(s,n,f,...)       do { } while (0)
+#define debug_printf(f,...)             do { } while (0)
+#define debug_str(s)                    do { } while (0)
+#define debug_led(val)                  do { } while (0)
+#define debug_verbose_printf(f,...)             do { } while (0)
 
 #ifdef CFG_DEBUG_VERBOSE
 #error CFG_DEBUG_VERBOSE requires CFG_DEBUG
@@ -50,7 +50,7 @@ void debug_str (const char* str);
 void debug_led (int val);
 
 #ifndef CFG_DEBUG_VERBOSE
-#define debug_verbose_printf(f,...)		do { } while (0)
+#define debug_verbose_printf(f,...)             do { } while (0)
 #else
 #define debug_verbose_printf debug_printf
 #endif

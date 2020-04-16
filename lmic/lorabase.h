@@ -200,7 +200,7 @@ enum {
     MCMD_RKEY_CNF = 0x0B, // - reset confirmation : u1: opt1, [n opts...]
     MCMD_ADRP_REQ = 0x0C, // - adr params         : u1: 7-4: limit_exp, 3-0: delay_exp
     MCMD_TIME_ANS = 0x0D, // - time answer        : u4:epoch_secs, u1:fracs
-    // Class B		     -
+    // Class B               -
     MCMD_PITV_ANS = 0x10, // - ping interval ack  : -
     MCMD_PNGC_REQ = 0x11, // - set ping freq/dr   : u3: freq, u1:7-4:RFU/3-0:datarate
     MCMD_BCNI_ANS = 0x12, // - next beacon start  : u2: delay(in TUNIT millis), u1:channel -- DEPRECATED

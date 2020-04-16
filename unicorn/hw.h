@@ -30,11 +30,11 @@
 #define FLASH_SZ                (128 * 1024)
 #define FLASH_END               (FLASH_BASE + FLASH_SZ)
 #define FLASH_PAGE_SZ           128
-#define FLASH_PAGE_NW		(FLASH_PAGE_SZ >> 2)
+#define FLASH_PAGE_NW           (FLASH_PAGE_SZ >> 2)
 
 #define PERIPH_USART
-#define USART_BR_9600	9600
-#define USART_BR_115200	115200
+#define USART_BR_9600   9600
+#define USART_BR_115200 115200
 
 #define PERIPH_PIO
 #define PIO_IRQ_LINE(gpio) (gpio)

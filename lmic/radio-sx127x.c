@@ -373,35 +373,35 @@ static void setopmode (u1_t opmode) {
     writeReg(RegOpMode, opmode);
     ostime_t t0 = os_getTime();
     while (readReg(RegOpMode) != opmode) {
-	if (os_getTime() - t0 > ms2osticks(20)) {
-	    // panic when opmode is not reached within 20ms
-	    debug_printf("FAILED TO SET OPMODE %02x within 20ms\r\n", opmode);
-	    ASSERT(0);
-	}
+        if (os_getTime() - t0 > ms2osticks(20)) {
+            // panic when opmode is not reached within 20ms
+            debug_printf("FAILED TO SET OPMODE %02x within 20ms\r\n", opmode);
+            ASSERT(0);
+        }
     }
 }
 
 // fill fifo when empty
 static void LoadFifo (void) {
     if (state.fifolen > 0) {
-	int n = (state.fifolen > FIFOTHRESH) ? FIFOTHRESH : state.fifolen;
-	radio_writeBuf(RegFifo, state.fifoptr, n);
-	state.fifoptr += n;
-	state.fifolen -= n;
+        int n = (state.fifolen > FIFOTHRESH) ? FIFOTHRESH : state.fifolen;
+        radio_writeBuf(RegFifo, state.fifoptr, n);
+        state.fifoptr += n;
+        state.fifolen -= n;
     }
 }
 
 // read fifo when level or ready
 static void UnloadFifo (void) {
     if (state.fifolen < 0) { // first byte
-	state.fifolen = 0;
-	radio_readBuf(RegFifo, &LMIC.dataLen, 1);
+        state.fifolen = 0;
+        radio_readBuf(RegFifo, &LMIC.dataLen, 1);
     }
     int n = (LMIC.dataLen - state.fifolen > (FIFOTHRESH-1)) ? (FIFOTHRESH-1) : (LMIC.dataLen - state.fifolen); // errata: unload one byte less
     if (n) {
-	radio_readBuf(RegFifo, state.fifoptr, n);
-	state.fifoptr += n;
-	state.fifolen += n;
+        radio_readBuf(RegFifo, state.fifoptr, n);
+        state.fifoptr += n;
+        state.fifolen += n;
     }
 }
 
@@ -410,47 +410,47 @@ static void configLoraModem (bool txcont) {
 #if defined(BRD_sx1276_radio)
     // set ModemConfig1 'bbbbccch' (bw=xxxx, cr=xxx, implicitheader=x)
     writeReg(LORARegModemConfig1,
-	     ((getBw(LMIC.rps) + 7) << 4) | // BW125=0 --> 7
-	     ((getCr(LMIC.rps) + 1) << 1) | // CR4_5=0 --> 1
-	     (getIh(LMIC.rps) != 0));       // implicit header
+             ((getBw(LMIC.rps) + 7) << 4) | // BW125=0 --> 7
+             ((getCr(LMIC.rps) + 1) << 1) | // CR4_5=0 --> 1
+             (getIh(LMIC.rps) != 0));       // implicit header
 
     // set ModemConfig2 'sssstcmm' (sf=xxxx, txcont=x, rxpayloadcrc=x, symtimeoutmsb=00)
     writeReg(LORARegModemConfig2,
-	     ((getSf(LMIC.rps)-1+7) << 4) |     // SF7=1 --> 7
+             ((getSf(LMIC.rps)-1+7) << 4) |     // SF7=1 --> 7
              (txcont ? 0x08 : 0x00)       |     // txcont: 0x08
-	     ((getNocrc(LMIC.rps) == 0) << 2)); // rxcrc
+             ((getNocrc(LMIC.rps) == 0) << 2)); // rxcrc
 
     // set ModemConfig3 'uuuuoarr' (unused=0000, lowdatarateoptimize=x, agcauto=1, reserved=00)
     writeReg(LORARegModemConfig3,
-	     (enDro(LMIC.rps) << 3) | // symtime >= 16ms
-	     (1 << 2));               // autoagc
+             (enDro(LMIC.rps) << 3) | // symtime >= 16ms
+             (1 << 2));               // autoagc
 
     // SX1276 Errata: 2.1 Sensitivity Optimization with a 500kHz Bandwith
     if (getBw(LMIC.rps) == BW500) {
-	writeReg(0x36, 0x02);
-	writeReg(0x3A, 0x64);
+        writeReg(0x36, 0x02);
+        writeReg(0x3A, 0x64);
     } else {
-	writeReg(0x36, 0x03);
-	// no need to reset register 0x3a
+        writeReg(0x36, 0x03);
+        // no need to reset register 0x3a
     }
 #elif defined(BRD_sx1272_radio)
     // set ModemConfig1 'bbccchco' (bw=xx, cr=xxx, implicitheader=x, rxpayloadcrc=x, lowdatarateoptimize=x)
     writeReg(LORARegModemConfig1,
-	     (getBw(LMIC.rps) << 6) |           // BW125=0 --> 0
-	     ((getCr(LMIC.rps) + 1) << 3) |     // CR4_5=0 --> 1
-	     ((getIh(LMIC.rps) != 0) << 2) |    // implicit header
-	     ((getNocrc(LMIC.rps) == 0) << 1) | // rxcrc
-	     enDro(LMIC.rps));                  // symtime >= 16ms
+             (getBw(LMIC.rps) << 6) |           // BW125=0 --> 0
+             ((getCr(LMIC.rps) + 1) << 3) |     // CR4_5=0 --> 1
+             ((getIh(LMIC.rps) != 0) << 2) |    // implicit header
+             ((getNocrc(LMIC.rps) == 0) << 1) | // rxcrc
+             enDro(LMIC.rps));                  // symtime >= 16ms
 
     // set ModemConfig2 'sssstamm' (sf=xxxx, txcont=x, agcauto=1 symtimeoutmsb=00)
     writeReg(LORARegModemConfig2,
-	     ((getSf(LMIC.rps)-1+7) << 4) | // SF7=1 --> 7
+             ((getSf(LMIC.rps)-1+7) << 4) | // SF7=1 --> 7
              (txcont ? 0x08 : 0x00)       | // txcont: 0x08
-	     (1 << 2));                     // autoagc
+             (1 << 2));                     // autoagc
 #endif // BRD_sx1272_radio
 
     if (getIh(LMIC.rps)) {
-	writeReg(LORARegPayloadLength, getIh(LMIC.rps)); // required length
+        writeReg(LORARegPayloadLength, getIh(LMIC.rps)); // required length
     }
 }
 
@@ -552,47 +552,47 @@ static void configPower (int pw) {
     // XXX - TODO - externalize this somehow
     // wailmer/wailord can only use 17dBm at DR4 (US)
     if (getBw(LMIC.rps) == BW500 && pw > 17) {
-	pw = 17;
+        pw = 17;
     }
 #endif
 
     if (BRD_PABOOSTSEL(LMIC.freq, pw)) { // use PA_BOOST
-	if (pw > 17) { // use high-power +20dBm option
-	    if (pw > 20) {
-		pw = 20;
-	    }
-	    writeReg(RegPaDac, 0x87); // high power
-	    writeReg(RegPaConfig, 0x80 | (pw - 5)); // BOOST (5..20dBm)
-	} else {
-	    if (pw < 2) {
-		pw = 2;
-	    }
-	    writeReg(RegPaDac, 0x84); // normal power
-	    writeReg(RegPaConfig, 0x80 | (pw - 2)); // BOOST (2..17dBm)
-	}
+        if (pw > 17) { // use high-power +20dBm option
+            if (pw > 20) {
+                pw = 20;
+            }
+            writeReg(RegPaDac, 0x87); // high power
+            writeReg(RegPaConfig, 0x80 | (pw - 5)); // BOOST (5..20dBm)
+        } else {
+            if (pw < 2) {
+                pw = 2;
+            }
+            writeReg(RegPaDac, 0x84); // normal power
+            writeReg(RegPaConfig, 0x80 | (pw - 2)); // BOOST (2..17dBm)
+        }
         setRadioConsumption_ua(true, pw);
     } else { // use PA_RFO
 #if defined(BRD_sx1276_radio)
-	if (pw > 0) {
-	    if (pw > 15) {
-		pw = 15;
-	    }
-	    writeReg(RegPaConfig, 0x70 | pw); // RFO, maxpower=111 (0..15dBm)
-	} else {
-	    if (pw < -4) {
-		pw = -4;
-	    }
-	    writeReg(RegPaConfig, pw + 4); // RFO, maxpower=000 (-4..11dBm)
-	}
-	writeReg(RegPaDac, 0x84); // normal power
+        if (pw > 0) {
+            if (pw > 15) {
+                pw = 15;
+            }
+            writeReg(RegPaConfig, 0x70 | pw); // RFO, maxpower=111 (0..15dBm)
+        } else {
+            if (pw < -4) {
+                pw = -4;
+            }
+            writeReg(RegPaConfig, pw + 4); // RFO, maxpower=000 (-4..11dBm)
+        }
+        writeReg(RegPaDac, 0x84); // normal power
 #elif defined(BRD_sx1272_radio)
-	if (pw < -1) {
-	    pw = -1;
-	} else if (pw > 14) {
-	    pw = 14;
-	}
-	writeReg(RegPaConfig, pw + 1); // RFO (-1..14dBm)
-	writeReg(RegPaDac, 0x84); // normal power
+        if (pw < -1) {
+            pw = -1;
+        } else if (pw > 14) {
+            pw = 14;
+        }
+        writeReg(RegPaConfig, pw + 1); // RFO (-1..14dBm)
+        writeReg(RegPaDac, 0x84); // normal power
 #endif
         setRadioConsumption_ua(false, (pw < 0) ? 0 : pw);
     }
@@ -604,9 +604,9 @@ static void configPower (int pw) {
 static void power_tcxo (void) {
     // power-up TCXO and set tcxo as input
     if ( hal_pin_tcxo(1) ) {
-	writeReg(RegTcxo, 0b00011001); // reserved=000, tcxo=1, reserved=1001
-	// delay to allow TCXO to wake up
-	hal_waitUntil(os_getTime() + ms2osticks(1));
+        writeReg(RegTcxo, 0b00011001); // reserved=000, tcxo=1, reserved=1001
+        // delay to allow TCXO to wake up
+        hal_waitUntil(os_getTime() + ms2osticks(1));
     }
 }
 
@@ -694,11 +694,11 @@ static void txfsk (bool txcont) {
     LoadFifo();
 
     if (!txcont) {
-	// enable IRQs in HAL
-	hal_irqmask_set(HAL_IRQMASK_DIO0 | HAL_IRQMASK_DIO1);
+        // enable IRQs in HAL
+        hal_irqmask_set(HAL_IRQMASK_DIO0 | HAL_IRQMASK_DIO1);
 
-	// set tx timeout
-	radio_set_irq_timeout(os_getTime() + us2osticks((FIFOTHRESH+10)*8*1000/50));
+        // set tx timeout
+        radio_set_irq_timeout(os_getTime() + us2osticks((FIFOTHRESH+10)*8*1000/50));
     }
 
     // enable antenna switch for TX
@@ -859,8 +859,8 @@ static void rxlorasingle (void) {
     hal_enableIRQs();
     // warn about delayed rx
     if( rxtime - now < 0 ) {
-	debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
-		     now - rxtime, osticks2ms(now - t0), now - t0);
+        debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
+                     now - rxtime, osticks2ms(now - t0), now - t0);
     }
 }
 
@@ -980,22 +980,22 @@ static void rxfsk (bool rxcontinuous) {
     hal_disableIRQs();
 
     if (rxcontinuous) {
-	BACKTRACE();
-	// XXX not suppported - receiver does not automatically restart
-	radio_set_irq_timeout(os_getTime() + sec2osticks(5)); // time out after 5 sec
+        BACKTRACE();
+        // XXX not suppported - receiver does not automatically restart
+        radio_set_irq_timeout(os_getTime() + sec2osticks(5)); // time out after 5 sec
     } else {
-	BACKTRACE();
-	// set preamble timeout
-	writeReg(FSKRegRxTimeout2, (LMIC.rxsyms + 1) / 2); // (TimeoutRxPreamble * 16 * Tbit)
-	// set rx timeout
-	radio_set_irq_timeout(LMIC.rxtime + us2osticks((2*FIFOTHRESH)*8*1000/50));
-	// busy wait until exact rx time
-	ostime_t now = os_getTime();
-	if (LMIC.rxtime - now < 0) {
-	    debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
-			 now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
-	}
-	hal_waitUntil(LMIC.rxtime);
+        BACKTRACE();
+        // set preamble timeout
+        writeReg(FSKRegRxTimeout2, (LMIC.rxsyms + 1) / 2); // (TimeoutRxPreamble * 16 * Tbit)
+        // set rx timeout
+        radio_set_irq_timeout(LMIC.rxtime + us2osticks((2*FIFOTHRESH)*8*1000/50));
+        // busy wait until exact rx time
+        ostime_t now = os_getTime();
+        if (LMIC.rxtime - now < 0) {
+            debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
+                         now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
+        }
+        hal_waitUntil(LMIC.rxtime);
     }
 
     // enable antenna switch for RX (and account power consumption)
@@ -1016,10 +1016,10 @@ void radio_startrx (bool rxcontinuous) {
         rxfsk(rxcontinuous);
     } else { // LoRa modem
         if (rxcontinuous) {
-	    rxloracont();
-	} else {
-	    rxlorasingle();
-	}
+            rxloracont();
+        } else {
+            rxlorasingle();
+        }
     }
 }
 
@@ -1059,7 +1059,7 @@ void radio_cca (void) {
 
     // set receiver bandwidth (SSB)
     writeReg(FSKRegRxBw, (getSf(LMIC.rps) == FSK) ? 0x0B /* 50kHz SSB */ :
-	     3 - getBw(LMIC.rps)); // 62.5/125/250kHz SSB (RxBwMant=0, RxBwExp 3/2/1)
+             3 - getBw(LMIC.rps)); // 62.5/125/250kHz SSB (RxBwMant=0, RxBwExp 3/2/1)
 
     // set power consumption for statistics
     LMIC.radioPwr_ua = 11500;
@@ -1079,9 +1079,9 @@ void radio_cca (void) {
     // sample rssi values
     do {
         rssi = -readReg(FSKRegRssiValue) / 2 + RSSI_OFF;
-	if (rssi > rssi_max) {
-	    rssi_max = rssi;
-	}
+        if (rssi > rssi_max) {
+            rssi_max = rssi;
+        }
     } while (rssi < rssi_th && os_getTime() - t0 < LMIC.rxtime);
 
     // return max observed rssi value
@@ -1140,12 +1140,12 @@ void radio_init (bool calibrate) {
 
     // optionally perform receiver chain calibration in FSK/STANDBY mode
     if (calibrate) {
-	// set band/frequency
-	configChannel();
+        // set band/frequency
+        configChannel();
 
-	// run receiver chain calibration
-	writeReg(FSKRegImageCal, RF_IMAGECAL_IMAGECAL_START); // (clear auto-cal)
-	while ( readReg(FSKRegImageCal) & RF_IMAGECAL_IMAGECAL_RUNNING );
+        // run receiver chain calibration
+        writeReg(FSKRegImageCal, RF_IMAGECAL_IMAGECAL_START); // (clear auto-cal)
+        while ( readReg(FSKRegImageCal) & RF_IMAGECAL_IMAGECAL_RUNNING );
     }
 
     // go to SLEEP mode
@@ -1161,94 +1161,94 @@ void radio_init (bool calibrate) {
 bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
     // dispatch modem
     if (getSf(LMIC.rps) == FSK) { // FSK modem
-	u1_t irqflags1 = readReg(FSKRegIrqFlags1);
-	u1_t irqflags2 = readReg(FSKRegIrqFlags2);
+        u1_t irqflags1 = readReg(FSKRegIrqFlags1);
+        u1_t irqflags2 = readReg(FSKRegIrqFlags2);
 
-	if (irqflags2 & IRQ_FSK2_PACKETSENT_MASK) { // TXDONE
-	    BACKTRACE();
+        if (irqflags2 & IRQ_FSK2_PACKETSENT_MASK) { // TXDONE
+            BACKTRACE();
 
             // save exact tx time
             LMIC.txend = irqtime - FSK_TXDONE_FIXUP;
 
-	} else if (irqflags2 & IRQ_FSK2_PAYLOADREADY_MASK) { // RXDONE
-	    BACKTRACE();
+        } else if (irqflags2 & IRQ_FSK2_PAYLOADREADY_MASK) { // RXDONE
+            BACKTRACE();
 
             // read rx quality parameters (at end of packet, not optimal since energy might already be gone)
-	    // (unfortunately in SX1272/SX1276 no averaged RSSI available in FSK mode, better in SX1261)
-	    LMIC.rssi = -readReg(FSKRegRssiValue) / 2 + RSSI_OFF;
-	    LMIC.snr = 0; // N/A
+            // (unfortunately in SX1272/SX1276 no averaged RSSI available in FSK mode, better in SX1261)
+            LMIC.rssi = -readReg(FSKRegRssiValue) / 2 + RSSI_OFF;
+            LMIC.snr = 0; // N/A
 
-	    // read FIFO
-	    UnloadFifo();
+            // read FIFO
+            UnloadFifo();
 
             // save exact rx timestamps
             LMIC.rxtime  = irqtime - FSK_RXDONE_FIXUP; // end of frame timestamp
-	    LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
+            LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
 #ifdef DEBUG_RX
-	    debug_printf("RX[freq=%.1F,FSK,rssi=%d,len=%d]: %h\r\n",
-			 LMIC.freq, 6, LMIC.rssi - RSSI_OFF, LMIC.dataLen, LMIC.frame, LMIC.dataLen);
+            debug_printf("RX[freq=%.1F,FSK,rssi=%d,len=%d]: %h\r\n",
+                         LMIC.freq, 6, LMIC.rssi - RSSI_OFF, LMIC.dataLen, LMIC.frame, LMIC.dataLen);
 #endif
-	} else if (irqflags1 & IRQ_FSK1_TIMEOUT_MASK) { // TIMEOUT
-	    BACKTRACE();
+        } else if (irqflags1 & IRQ_FSK1_TIMEOUT_MASK) { // TIMEOUT
+            BACKTRACE();
             // indicate timeout
             LMIC.dataLen = 0;
 #ifdef DEBUG_RX
-	    debug_printf("RX[freq=%.1F,FSK]: TIMEOUT (%d us)\r\n", LMIC.freq, 6, osticks2us(irqtime - LMIC.rxtime));
+            debug_printf("RX[freq=%.1F,FSK]: TIMEOUT (%d us)\r\n", LMIC.freq, 6, osticks2us(irqtime - LMIC.rxtime));
 #endif
-	} else if( irqflags2 & IRQ_FSK2_FIFOEMPTY_MASK ) { // FIFOEMPTY (TX)
-	    BACKTRACE();
+        } else if( irqflags2 & IRQ_FSK2_FIFOEMPTY_MASK ) { // FIFOEMPTY (TX)
+            BACKTRACE();
 
-	    // fill FIFO buffer
-	    LoadFifo();
+            // fill FIFO buffer
+            LoadFifo();
 
-	    // update tx timeout
-	    radio_set_irq_timeout(irqtime + us2osticks((FIFOTHRESH+10)*8*1000/50));
+            // update tx timeout
+            radio_set_irq_timeout(irqtime + us2osticks((FIFOTHRESH+10)*8*1000/50));
 
-	    // keep waiting for FifoEmpty or PacketSent interrupt
-	    return false;
+            // keep waiting for FifoEmpty or PacketSent interrupt
+            return false;
 
-	} else if( irqflags2 & IRQ_FSK2_FIFOLEVEL_MASK ) { // FIFOLEVEL (RX)
-	    BACKTRACE();
+        } else if( irqflags2 & IRQ_FSK2_FIFOLEVEL_MASK ) { // FIFOLEVEL (RX)
+            BACKTRACE();
 
-	    // read FIFO buffer
-	    UnloadFifo();
+            // read FIFO buffer
+            UnloadFifo();
 
-	    // update rx timeout
-	    radio_set_irq_timeout(irqtime + us2osticks((FIFOTHRESH+10)*8*1000/50));
+            // update rx timeout
+            radio_set_irq_timeout(irqtime + us2osticks((FIFOTHRESH+10)*8*1000/50));
 
-	    // keep waiting for FifoLevel or PayloadReady interrupt
-	    return false;
+            // keep waiting for FifoLevel or PayloadReady interrupt
+            return false;
 
-	} else {
-	    // unexpected irq
-	    debug_printf("UNEXPECTED FSK IRQ %02x %02x\r\n", irqflags1, irqflags2);
-	    ASSERT(0);
-	}
+        } else {
+            // unexpected irq
+            debug_printf("UNEXPECTED FSK IRQ %02x %02x\r\n", irqflags1, irqflags2);
+            ASSERT(0);
+        }
 
-	// clear FSK IRQ flags
-	writeReg(FSKRegIrqFlags1, 0xFF);
-	writeReg(FSKRegIrqFlags2, 0xFF);
+        // clear FSK IRQ flags
+        writeReg(FSKRegIrqFlags1, 0xFF);
+        writeReg(FSKRegIrqFlags2, 0xFF);
 
     } else { // LORA modem
-	u1_t irqflags = readReg(LORARegIrqFlags);
+        u1_t irqflags = readReg(LORARegIrqFlags);
 
         if (irqflags & IRQ_LORA_TXDONE_MASK) { // TXDONE
-	    BACKTRACE();
+            BACKTRACE();
 
             // save exact tx time
             LMIC.txend = irqtime - LORA_TXDONE_FIXUP;
 
         } else if (irqflags & IRQ_LORA_RXDONE_MASK) { // RXDONE (rx or scan)
-	    BACKTRACE();
+            BACKTRACE();
 
             // read rx quality parameters (averaged over packet)
             LMIC.snr  = readReg(LORARegPktSnrValue);  // SNR [dB] * 4
-	    LMIC.rssi = readReg(LORARegPktRssiValue); // final values -128..127 correspond to -196...+63 dBm (subtract RSSI_OFF)
-	    if (LMIC.snr < 0) {
-		LMIC.rssi = -RSSI_HF_CONST + LMIC.rssi + LMIC.snr/4 + RSSI_OFF;
-	    } else {
-		LMIC.rssi = -RSSI_HF_CONST + LMIC.rssi * 16/15 + RSSI_OFF;
-	    }
+            LMIC.rssi = readReg(LORARegPktRssiValue); // final values -128..127 correspond to -196...+63 dBm (subtract RSSI_OFF)
+            if (LMIC.snr < 0) {
+                LMIC.rssi = -RSSI_HF_CONST + LMIC.rssi + LMIC.snr/4 + RSSI_OFF;
+            } else {
+                LMIC.rssi = -RSSI_HF_CONST + LMIC.rssi * 16/15 + RSSI_OFF;
+            }
 
             // get PDU length
             LMIC.dataLen = readReg(LORARegRxNbBytes);
@@ -1261,49 +1261,49 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             else if (getBw(LMIC.rps) == BW500) {
                 LMIC.rxtime -= LORA_RXDONE_FIXUP_500[getSf(LMIC.rps)];
             }
-	    LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
+            LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
 
-	    // set FIFO read address pointer (to address of last packet received)
-	    writeReg(LORARegFifoAddrPtr, readReg(LORARegFifoRxCurrentAddr));
+            // set FIFO read address pointer (to address of last packet received)
+            writeReg(LORARegFifoAddrPtr, readReg(LORARegFifoRxCurrentAddr));
 
-	    // read FIFO
-	    radio_readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
+            // read FIFO
+            radio_readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
 #ifdef DEBUG_RX
-	    debug_printf("RX[freq=%.1F,sf=%d,bw=%d,rssi=%d,snr=%.2F,len=%d]: %.80h\r\n",
-			 LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps),
-			 LMIC.rssi - RSSI_OFF, (s4_t)(LMIC.snr * 100 / SNR_SCALEUP), 2,
-			 LMIC.dataLen, LMIC.frame, LMIC.dataLen);
+            debug_printf("RX[freq=%.1F,sf=%d,bw=%d,rssi=%d,snr=%.2F,len=%d]: %.80h\r\n",
+                         LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps),
+                         LMIC.rssi - RSSI_OFF, (s4_t)(LMIC.snr * 100 / SNR_SCALEUP), 2,
+                         LMIC.dataLen, LMIC.frame, LMIC.dataLen);
 #endif
-	} else if (irqflags & IRQ_LORA_RXTOUT_MASK) { // RXTOUT
-	    BACKTRACE();
+        } else if (irqflags & IRQ_LORA_RXTOUT_MASK) { // RXTOUT
+            BACKTRACE();
             // indicate timeout
             LMIC.dataLen = 0;
 #ifdef DEBUG_RX
-	    debug_printf("RX[freq=%.1F,sf=%d,bw=%d]: TIMEOUT (%d us)\r\n",
-			 LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps), osticks2us(irqtime - LMIC.rxtime));
+            debug_printf("RX[freq=%.1F,sf=%d,bw=%d]: TIMEOUT (%d us)\r\n",
+                         LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps), osticks2us(irqtime - LMIC.rxtime));
 #endif
-	} else if (irqflags & IRQ_LORA_CDDONE_MASK) { // CDDONE
-	    BACKTRACE();
-	    // check if preamble symbol was detected
-	    if (irqflags & IRQ_LORA_CDDETD_MASK) {
-		// switch to receiving (continuous)
-		writeReg(RegOpMode, OPMODE_LORA_RX);
-		// continue waiting
-		return false;
-	    } else {
-		// indicate timeout
-		LMIC.dataLen = 0;
-	    }
+        } else if (irqflags & IRQ_LORA_CDDONE_MASK) { // CDDONE
+            BACKTRACE();
+            // check if preamble symbol was detected
+            if (irqflags & IRQ_LORA_CDDETD_MASK) {
+                // switch to receiving (continuous)
+                writeReg(RegOpMode, OPMODE_LORA_RX);
+                // continue waiting
+                return false;
+            } else {
+                // indicate timeout
+                LMIC.dataLen = 0;
+            }
         } else {
-	    // unexpected irq
-	    ASSERT(0);
-	}
+            // unexpected irq
+            ASSERT(0);
+        }
 
-	// mask all LoRa IRQs
-	writeReg(LORARegIrqFlagsMask, 0xFF);
+        // mask all LoRa IRQs
+        writeReg(LORARegIrqFlagsMask, 0xFF);
 
-	// clear LoRa IRQ flags
-	writeReg(LORARegIrqFlags, 0xFF);
+        // clear LoRa IRQ flags
+        writeReg(LORARegIrqFlags, 0xFF);
     }
 
     // radio operation completed

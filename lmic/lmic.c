@@ -203,7 +203,7 @@ static const rfuncs_t RFUNCS_FIX;  // fwd decl
 static const region_t REGIONS[REGIONS_COUNT] = {
 #ifdef CFG_eu868
     [REGION_EU868] = {
-	.regcode        = REGCODE_EU868,
+        .regcode        = REGCODE_EU868,
         .flags          = 0,
         .minFreq        = 863000000,
         .maxFreq        = 870000000,
@@ -235,14 +235,14 @@ static const region_t REGIONS[REGIONS_COUNT] = {
         .rx1DrOff       = RX1DR_OFFSETS(0,  0, 1, 2, 3, 4, 5,
                                         ILLEGAL_RX1DRoff, ILLEGAL_RX1DRoff),
         .dr2rps         = DR2RPS_EU,
-	.dr2maxAppPload = {51, 51, 51, 115, 242, 242, 242, 242, 0, 0, 0, 0, 0, 0, 0, 0},
+        .dr2maxAppPload = {51, 51, 51, 115, 242, 242, 242, 242, 0, 0, 0, 0, 0, 0, 0, 0},
         .rfuncs         = &RFUNCS_DYN,
 
     },
 #endif
 #ifdef CFG_as923
     [REGION_AS923] = {
-	.regcode        = REGCODE_AS923,
+        .regcode        = REGCODE_AS923,
         .flags          = 0,
         .minFreq        = 920000000,
         .maxFreq        = 928000000,
@@ -263,13 +263,13 @@ static const region_t REGIONS[REGIONS_COUNT] = {
         .maxEirp        = 16,
         .rx1DrOff       = RX1DR_OFFSETS(0,  0, 1, 2, 3, 4, 5, -1, -2),
         .dr2rps         = DR2RPS_EU,
-	.dr2maxAppPload = { 0, 0, 11, 53, 125, 242, 242, 242, 0, 0, 0, 0, 0, 0, 0, 0},
+        .dr2maxAppPload = { 0, 0, 11, 53, 125, 242, 242, 242, 0, 0, 0, 0, 0, 0, 0, 0},
         .rfuncs         = &RFUNCS_DYN,
     },
 #endif
 #ifdef CFG_us915
     [REGION_US915] = {
-	.regcode        = REGCODE_US915,
+        .regcode        = REGCODE_US915,
         .flags          = REG_FIXED,
         .minFreq        = 902000000,
         .maxFreq        = 928000000,
@@ -291,13 +291,13 @@ static const region_t REGIONS[REGIONS_COUNT] = {
                                         ILLEGAL_RX1DRoff, ILLEGAL_RX1DRoff,
                                         ILLEGAL_RX1DRoff, ILLEGAL_RX1DRoff),
         .dr2rps         = DR2RPS_US,
-	.dr2maxAppPload = { 11, 53, 125, 242, 242, 0, 0, 0, 53, 129, 242, 242, 242, 242, 0, 0},
+        .dr2maxAppPload = { 11, 53, 125, 242, 242, 0, 0, 0, 53, 129, 242, 242, 242, 242, 0, 0},
         .rfuncs         = &RFUNCS_FIX,
     },
 #endif
 #ifdef CFG_au915
     [REGION_AU915] = {
-	.regcode        = REGCODE_AU915,
+        .regcode        = REGCODE_AU915,
         .flags          = REG_FIXED,
         .minFreq        = 915000000,
         .maxFreq        = 928000000,
@@ -319,13 +319,13 @@ static const region_t REGIONS[REGIONS_COUNT] = {
         .rx1DrOff       = RX1DR_OFFSETS(8,  0, 1, 2, 3, 4, 5,
                                         ILLEGAL_RX1DRoff, ILLEGAL_RX1DRoff),
         .dr2rps         = DR2RPS_AU,
-	.dr2maxAppPload = {0, 0, 11, 53, 125, 242, 242, 0, 53, 129, 242, 242, 242, 242, 0, 0},
+        .dr2maxAppPload = {0, 0, 11, 53, 125, 242, 242, 0, 53, 129, 242, 242, 242, 242, 0, 0},
         .rfuncs         = &RFUNCS_FIX,
     },
 #endif
 #ifdef CFG_cn470
     [REGION_CN470] = {
-	.regcode        = REGCODE_CN470,
+        .regcode        = REGCODE_CN470,
         .flags          = REG_FIXED,
         .minFreq        = 470000000,
         .maxFreq        = 510000000,
@@ -346,7 +346,7 @@ static const region_t REGIONS[REGIONS_COUNT] = {
         .rx1DrOff       = RX1DR_OFFSETS(0,  0, 1, 2, 3, 4,
                                         ILLEGAL_RX1DRoff, ILLEGAL_RX1DRoff, ILLEGAL_RX1DRoff),
         .dr2rps         = DR2RPS_125kHz,
-	.dr2maxAppPload = {51, 51, 51, 115, 242, 242, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        .dr2maxAppPload = {51, 51, 51, 115, 242, 242, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         .rfuncs         = &RFUNCS_FIX,
     },
 #endif
@@ -1155,7 +1155,7 @@ nextblock:
         LMIC.txChnl = LMIC.fix.hoplist[LMIC.refChnl];
 done:
         LMIC.opmode &= ~OP_NEXTCHNL;
-	delay = rndDelay(32);
+        delay = rndDelay(32);
 #endif
     } else {
 #ifdef REG_DYN
@@ -1174,7 +1174,7 @@ done:
                 setDrJoin(DRCHG_NOJACC, decDR(LMIC.datarate));
             }
         }
-	delay = rndDelay(255 >> LMIC.datarate);
+        delay = rndDelay(255 >> LMIC.datarate);
 #endif
     }
     if (failed)
@@ -1208,16 +1208,16 @@ u1_t prng_next (u1_t* prngbuf) {
 // generate pseudo-random permutation from start..end-1
 static void perm (unsigned char* p, int start, int end, u1_t* prng) {
     for (int i = 0; i < (end - start); i++) {
-	uint32_t j = (prng_next(prng) << 8 ) | prng_next(prng);
-	j %= (i + 1); // has small bias
-	p[i] = p[j];
-	p[j] = i + start;
+        uint32_t j = (prng_next(prng) << 8 ) | prng_next(prng);
+        j %= (i + 1); // has small bias
+        p[i] = p[j];
+        p[j] = i + start;
     }
 }
 
 // generate a pseudo-random hoplist
 static void generateHopList (u1_t* hoplist, int nch) {
-    int nb = nch >> 3;	// number of 8-ch blocks
+    int nb = nch >> 3;  // number of 8-ch blocks
 
     u1_t prng[16];      // prng state
     memcpy(prng, "\x10hoplist", 8);
@@ -1228,11 +1228,11 @@ static void generateHopList (u1_t* hoplist, int nch) {
     perm(bp + 1, 1, nb, prng);
 
     for (int b = 0; b < nb; b++) {
-	unsigned char cp[8];
-	perm(cp, 0, 8, prng); // channel permutation
-	for (int c = 0; c < 8; c++) {
-	    hoplist[c*nb+b] = bp[b]*8+cp[c];
-	}
+        unsigned char cp[8];
+        perm(cp, 0, 8, prng); // channel permutation
+        for (int c = 0; c < 8; c++) {
+            hoplist[c*nb+b] = bp[b]*8+cp[c];
+        }
     }
 }
 
@@ -2181,15 +2181,15 @@ static bit_t processJoinAccept (void) {
         }
         LMIC.opmode &= ~OP_TXRXPEND;
         ostime_t delay = nextJoinState();
-	// update txend
-	LMIC.txend = os_getTime() + delay;
+        // update txend
+        LMIC.txend = os_getTime() + delay;
         // Build next JOIN REQUEST with next engineUpdate call
         // Optionally, report join failed.
         // Both after a random/chosen amount of ticks.
         os_setApproxTimedCallback(&LMIC.osjob, LMIC.txend,
-				  ((delay&1) != 0)
-				  ? FUNC_ADDR(onJoinFailed)      // one JOIN iteration done and failed
-				  : FUNC_ADDR(runEngineUpdate)); // next step to be delayed
+                                  ((delay&1) != 0)
+                                  ? FUNC_ADDR(onJoinFailed)      // one JOIN iteration done and failed
+                                  : FUNC_ADDR(runEngineUpdate)); // next step to be delayed
         return 1;
     }
     u1_t hdr  = LMIC.frame[0];
@@ -2324,7 +2324,7 @@ static void processRx1DnData (osjob_t* osjob) {
 static void processRx2ClassC (osjob_t* osjob) {
     if( LMIC.dataLen != 0 ) {
         LMIC.txrxFlags = TXRX_DNW2;
-	if ((LMIC.devaddr == os_rlsbf4(&LMIC.frame[OFF_DAT_ADDR]) && decodeFrame()) || decodeMultiCastFrame() ) {
+        if ((LMIC.devaddr == os_rlsbf4(&LMIC.frame[OFF_DAT_ADDR]) && decodeFrame()) || decodeMultiCastFrame() ) {
             reportEvent(EV_RXCOMPLETE);
             return;
         }
@@ -2419,9 +2419,9 @@ static void buildDataFrame (void) {
     if( LMIC.dutyCapAns ) {
         if( end <= OFF_DAT_OPTS + 15 - 1 ) {
             LMIC.frame[end] = MCMD_DCAP_ANS;
-	    end += 1;
-	}
-	LMIC.dutyCapAns = 0;
+            end += 1;
+        }
+        LMIC.dutyCapAns = 0;
     }
     if( LMIC.dn2Ans ) {
         // Note: this is cleared with reception of a frame in a class A RX1/RX2 window
@@ -2814,7 +2814,7 @@ static bit_t processDnData (void) {
                 if (LMIC.txPowAdj) {
                     setDrTxpow(DRCHG_NOADRACK, LMIC.datarate, 0);
                 }
-		if (decDR(LMIC.datarate) != LMIC.datarate) {
+                if (decDR(LMIC.datarate) != LMIC.datarate) {
                     setDrTxpow(DRCHG_NOADRACK, decDR(LMIC.datarate), KEEP_TXPOWADJ);
                 } else if (REG_IS_FIX()
 #ifdef REG_FIX
@@ -3156,9 +3156,9 @@ int LMIC_regionIdx (u1_t regionCode) {
         return 0;
     }
     for( int idx = 0; idx < REGIONS_COUNT; idx++ ) {
-	if (REGIONS[idx].regcode == regionCode) {
-	    return idx;
-	}
+        if (REGIONS[idx].regcode == regionCode) {
+            return idx;
+        }
     }
     return -1;
 }
@@ -3330,19 +3330,19 @@ int LMIC_setMultiCastSession (devaddr_t grpaddr, const u1_t* nwkKeyDn, const u1_
     session_t* s;
     for(s = LMIC.sessions; s<LMIC.sessions+MAX_MULTICAST_SESSIONS && s->grpaddr!=0 && s->grpaddr!=grpaddr; s++);
     if (s >= LMIC.sessions+MAX_MULTICAST_SESSIONS)
-	return 0;
+        return 0;
 
     s->grpaddr  = grpaddr;
     s->seqnoADn = seqnoADn;
 
     if( nwkKeyDn != (u1_t*)0 ) {
         os_copyMem(s->nwkKeyDn, nwkKeyDn, 16);
-	os_copyMem(&LMIC.lceCtx.mcgroup[LCE_MCGRP_0 + (s-LMIC.sessions)].nwkSKeyDn, nwkKeyDn, 16);
+        os_copyMem(&LMIC.lceCtx.mcgroup[LCE_MCGRP_0 + (s-LMIC.sessions)].nwkSKeyDn, nwkKeyDn, 16);
     }
 
     if( appKey != (u1_t*)0 ) {
         os_copyMem(s->appKey, appKey, 16);
-	os_copyMem(&LMIC.lceCtx.mcgroup[LCE_MCGRP_0 + (s-LMIC.sessions)].appSKey, appKey, 16);
+        os_copyMem(&LMIC.lceCtx.mcgroup[LCE_MCGRP_0 + (s-LMIC.sessions)].appSKey, appKey, 16);
     }
     return 1;
 }
