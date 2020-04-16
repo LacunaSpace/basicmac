@@ -21,6 +21,7 @@ VTARGETS	:= $(addprefix variant-,$(VARIANTS))
 
 REGIONS.eu868	:= eu868
 REGIONS.us915	:= us915
+REGIONS.in865	:= in865
 
 REGIONS.hybrid	?= eu868 us915
 

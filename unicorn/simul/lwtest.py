@@ -164,7 +164,7 @@ class LWTest(LoRaWANTest):
         await self.start_testmode()
 
         # create new region with additional channel (for test part 3)
-        extra_ch = [ ld.ChDef(freq=867100000, minDR=0, maxDR=5) ]
+        extra_ch = [ ld.ChDef(freq=867850000, minDR=0, maxDR=5) ]
         reg = ld.Region_EU868()
         reg.upchannels += extra_ch
 
@@ -192,10 +192,10 @@ class LWTest(LoRaWANTest):
             expectedchans = self.region.upchannels.copy()
             if 'cflist' in jo:
                 expectedchans += extra_ch
-            usedfreqs = await self.freq_count(8 * len(expectedchans))
+            usedfreqs = await self.freq_count(16 * len(expectedchans))
             DeviceTest.assert_equals(
-                    set(ch[0] for ch in expectedchans),
-                    set(usedfreqs.keys()), explain=f'{jo}')
+                    set(usedfreqs.keys()), set(ch[0] for ch in expectedchans),
+                    explain=f'{jo}')
 
         return True
 
@@ -355,10 +355,10 @@ class LWTest(LoRaWANTest):
             # wait until message is received on channel 1 AND
             # simultaneously ensure that the DlChannelAns is being
             # repeated while no DL is received
-            for i in range(16):
+            for i in range(20):
                 m = await self.lw_uplink()
                 opts = self.get_opts(m)
-                self.assert_equals(len(opts), 1)
+                self.assert_equals(len(opts), 1, explain=f'i={i}, f={f}')
                 o = opts[0]
                 assert type(o) is lo.DlChannelAns
                 self.assert_equals(o.ChnlAck.value, 1)
@@ -378,6 +378,11 @@ class LWTest(LoRaWANTest):
             opts = self.get_opts(m)
             self.assert_equals(len(opts), 0)
             self.get_dnctr(m, expect=dc+1)
+
+            # make sure we get a message on an unmodified channel, otherwise
+            # next command won't be received..
+            while self.getupch(m) == 1:
+                m = await self.tst_uplink()
 
         # Note: the following part of the test expands upon what's required...
         for ch, f in [(1, 333333333), (3, 868500000)]:
@@ -435,7 +440,7 @@ class LWTest(LoRaWANTest):
         assert self.isconfirmed(m)
         dc = self.get_dnctr(m, expect=dc+1)
 
-        self.lw_dnlink(m) # empty downlink as ACK
+        self.lw_dnlink(m, fctrl=lm.FCtrl.ACK) # empty downlink as ACK
 
         m = await self.tst_uplink()
         assert self.isconfirmed(m)
@@ -446,7 +451,7 @@ class LWTest(LoRaWANTest):
         self.assert_equals(m2['upmsg'].pdu, m['upmsg'].pdu)
         m = m2
 
-        self.lw_dnlink(m) # empty downlink as ACK
+        self.lw_dnlink(m, fctrl=lm.FCtrl.ACK) # empty downlink as ACK
 
         m = await self.tst_uplink()
         assert self.isconfirmed(m)
@@ -468,7 +473,7 @@ class LWTest(LoRaWANTest):
             assert self.isack(m)
 
             # counter should also be increased (unless it was a repeat)
-            dc = self.get_dnctr(m, expect=(dc if fcntdn_adj else dc+1))
+            dc = self.get_dnctr(m, expect=(dc if fcntdn_adj else dc+1), explain=f'fcntdn_adj={fcntdn_adj}')
 
             if fcntdn_adj:
                 return True
@@ -625,7 +630,7 @@ class LWTest(LoRaWANTest):
             self.assert_equals(self.rps2dr(m['upmsg'].rps), dr)
 
         # d. Optional DataRates
-        nchfreq = 869300000
+        nchfreq = 869100000
         m = await ncr_optdr(m, nchfreq)
         for dr in range(6, 8):
             self.lw_dnlink(m, port=0,

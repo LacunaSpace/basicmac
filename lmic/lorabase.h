@@ -26,6 +26,7 @@ typedef s1_t eirp_t;
 
 enum { ILLEGAL_DR  = 0xFF };
 enum { ILLEGAL_RPS = 0xFF };
+enum { ILLEGAL_MAS = 0x00 };
 
 // Global maximum frame length
 enum { BCN_PREAMBLE_LEN  = 10 };  // length in symbols - actual time depends on DR

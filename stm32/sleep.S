@@ -12,6 +12,8 @@
 
 #define LPTIM1_IRQn_BIT 13
 
+#define IWDG_KR         0
+
 #define MASK(n) (1 << (n ## _BIT))      // bit mask
 
 
@@ -28,7 +30,12 @@
     .section .fastcode.sleep_htt,"ax",%progbits
     .thumb_func
 sleep_htt:
-        push {r4-r6,lr}
+#if CFG_watchdog
+        #define REGLIST r4-r7
+#else
+        #define REGLIST r4-r6
+#endif
+        push {REGLIST,lr}
 
         // r0 - hticks
         // r1 - htt
@@ -42,7 +49,11 @@ sleep_htt:
         movs r5, #1
         lsls r5, #LPTIM1_IRQn_BIT
         // r6 - scratch
-        
+#if CFG_watchdog
+        // r7 - IWDG base
+        ldr r7, .L_IWDG_BASE
+#endif
+
         b 3f
 
         // zzz
@@ -65,17 +76,30 @@ sleep_htt:
         // increment hticks
         adds r0, #1
 
+#if CFG_watchdog
+        // refresh watchdog
+        ldr r6, .L_IWDG_REFRESH
+        str r6, [r7, #IWDG_KR]
+#endif
+
         // compare hticks to htt
     3:  cmp r0, r1
         bmi 1b
 
-    4:  pop {r4-r6,pc}
+    4:  pop {REGLIST,pc}
 
     .p2align(2)
 .L_LPTIM1_BASE:
     .word 0x40007c00
 .L_NVIC_ICPR:
     .word 0xE000E100+0x180
+#if CFG_watchdog
+.L_IWDG_BASE:
+    .word 0x40003000
+.L_IWDG_REFRESH:
+    .word 0xAAAA
+#endif
+#undef REGLIST
 
     .size sleep_htt, .-sleep_htt
     .global sleep_htt

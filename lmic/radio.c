@@ -16,6 +16,7 @@ static struct {
     ostime_t irqtime;
     osjob_t irqjob;
     u1_t diomask;
+    u1_t txmode;
 } state;
 
 // stop radio, disarm interrupts, cancel jobs
@@ -24,7 +25,7 @@ static void radio_stop (void) {
     // put radio to sleep
     radio_sleep();
     // disable antenna switch
-    hal_pin_rxtx(-1);
+    hal_ant_switch(HAL_ANTSW_OFF);
     // power-down TCXO
     hal_pin_tcxo(0);
     // disable IRQs in HAL
@@ -44,6 +45,11 @@ static void radio_irq_timeout (osjob_t* j) {
 
     // stop everything (antenna switch, hal irqs, sleep, irq job)
     radio_stop();
+
+    // re-initialize radio if tx operation timed out
+    if (state.txmode) {
+	radio_init(true);
+    }
 
     // enable IRQs!
     hal_enableIRQs();
@@ -75,9 +81,7 @@ static void radio_irq_func (osjob_t* j) {
     }
 
     // clear irq state (job has been run)
-    hal_disableIRQs();
     state.diomask = 0;
-    hal_enableIRQs();
 }
 
 // called by hal exti IRQ handler
@@ -99,23 +103,23 @@ void radio_irq_handler (u1_t diomask, ostime_t ticks) {
 
 void os_radio (u1_t mode) {
     switch (mode) {
-	case RADIO_RST:
+	case RADIO_STOP:
 	    radio_stop();
 	    break;
 
 	case RADIO_TX:
 	    radio_stop();
 #ifdef DEBUG_TX
-	    debug_printf("TX[freq=%.1F,sf=%d,bw=%s,pow=%d%+d%+d,len=%d%s]: %h\r\n",
-			 LMIC.freq, 6,
-			 getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
-			 LMIC.txpow, LMIC.txPowAdj, TX_ERP_ADJ, LMIC.dataLen,
+	    debug_printf("TX[fcnt=%ld,freq=%.1F,sf=%d,bw=%d,pow=%d,len=%d%s]: %.80h\r\n",
+			 LMIC.seqnoUp - 1, LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps),
+			 LMIC.txpow, LMIC.dataLen,
 			 (LMIC.pendTxPort != 0 && (LMIC.frame[OFF_DAT_FCT] & FCT_ADRARQ)) ? ",ADRARQ" : "",
 			 LMIC.frame, LMIC.dataLen);
 #endif
 	    // transmit frame now (wait for completion interrupt)
-	    radio_starttx(0);
+	    radio_starttx(false);
 	    // set timeout for tx operation (should not happen)
+	    state.txmode = 1;
 	    radio_set_irq_timeout(os_getTime() + ms2osticks(20) + LMIC_calcAirTime(LMIC.rps, LMIC.dataLen) * 110 / 100);
 	    break;
 
@@ -128,8 +132,9 @@ void os_radio (u1_t mode) {
 			 LMIC.rxtime, 0);
 #endif
 	    // receive frame at rxtime/now (wait for completion interrupt)
-	    radio_startrx(0);
+	    radio_startrx(false);
 	    // set timeout for rx operation (should not happen, might be updated by radio driver)
+	    state.txmode = 0;
 	    radio_set_irq_timeout(LMIC.rxtime + ms2osticks(5) + LMIC_calcAirTime(LMIC.rps, 255) * 110 / 100);
 	    break;
 
@@ -141,20 +146,39 @@ void os_radio (u1_t mode) {
 			 getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)));
 #endif
 	    // start scanning for frame now (wait for completion interrupt)
-	    radio_startrx(1);
+	    state.txmode = 0;
+	    radio_startrx(true);
 	    break;
 
 	case RADIO_TXCW:
 	    radio_stop();
 	    // transmit continuous wave (until abort)
-	    radio_starttx(1);
+	    radio_cw();
 	    break;
 
 	case RADIO_CCA:
 	    radio_stop();
 	    // clear channel assessment
 	    radio_cca();
+	    break;
+
+	case RADIO_INIT:
+	    // reset and calibrate radio (uses LMIC.freq)
+	    radio_init(true);
+	    break;
+
+	case RADIO_TXCONT:
 	    radio_stop();
+	    radio_starttx(true);
+	    break;
+
+	case RADIO_CAD:
+	    radio_stop();
+	    // set timeout for cad/rx operation (should not happen, might be updated by radio driver)
+	    state.txmode = 0;
+	    radio_set_irq_timeout(os_getTime() + ms2osticks(10) + LMIC_calcAirTime(LMIC.rps, 255) * 110 / 100);
+	    // channel activity detection and rx if preamble symbol found
+	    radio_cad();
 	    break;
     }
 }

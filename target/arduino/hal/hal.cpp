@@ -73,11 +73,12 @@ static void hal_io_init () {
 }
 
 // rx = 0, tx = 1, off = -1
-void hal_pin_rxtx (s1_t val) {
+void hal_ant_switch (u1_t val) {
+    // TODO: Support separate pin for TX2 (PA_BOOST output)
     if (lmic_pins.tx != LMIC_UNUSED_PIN)
-        digitalWrite(lmic_pins.tx, val == 1);
+        digitalWrite(lmic_pins.tx, val == HAL_ANTSW_TX || val == HAL_ANTSW_TX2);
     if (lmic_pins.rx != LMIC_UNUSED_PIN)
-        digitalWrite(lmic_pins.rx, val == 0);
+        digitalWrite(lmic_pins.rx, val == HAL_ANTSW_RX);
 }
 
 // set radio RST pin to given value (or keep floating!)

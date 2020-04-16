@@ -79,10 +79,10 @@ void lce_encKey0 (u1_t* buf) {
     os_aes(AES_ENC,buf,16);
 }
 
-static void micB0 (u4_t devaddr, u4_t seqno, int dndir, int len) {
+static void micB0 (u4_t devaddr, u4_t seqno, u1_t cat, int len) {
     os_clearMem(AESaux,16);
     AESaux[0]  = 0x49;
-    AESaux[5]  = dndir?1:0;
+    AESaux[5]  = cat;
     AESaux[15] = len;
     os_wlsbf4(AESaux+ 6,devaddr);
     os_wlsbf4(AESaux+10,seqno);
@@ -129,14 +129,14 @@ u4_t lce_micKey0 (u4_t devaddr, u4_t seqno, u1_t* pdu, int len) {
     return os_rlsbf4(mic);
 }
 
-void lce_cipher (s1_t keyid, u4_t devaddr, u4_t seqno, int dndir, u1_t* payload, int len) {
-    if(len <= 0 || (!dndir && (LMIC.opmode & OP_NOCRYPT)) ) {
+void lce_cipher (s1_t keyid, u4_t devaddr, u4_t seqno, int cat, u1_t* payload, int len) {
+    if(len <= 0 || (cat==LCE_SCC_UP && (LMIC.opmode & OP_NOCRYPT)) ) {
 	return;
     }
     const u1_t* key;
     if( keyid == LCE_NWKSKEY ) {
 #if defined(CFG_lorawan11)
-        key = dndir ? LMIC.lceCtx.nwkSKeyDn : LMIC.lceCtx.nwkSKey;
+        key = cat==LCE_SCC_DN ? LMIC.lceCtx.nwkSKeyDn : LMIC.lceCtx.nwkSKey;
 #else
         key = LMIC.lceCtx.nwkSKey;
 #endif
@@ -146,14 +146,14 @@ void lce_cipher (s1_t keyid, u4_t devaddr, u4_t seqno, int dndir, u1_t* payload,
     }
     else if( keyid >= LCE_MCGRP_0 && keyid < LCE_MCGRP_0+LCE_MCGRP_MAX ) {
         key = LMIC.lceCtx.mcgroup[keyid - LCE_MCGRP_0].appSKey;
-        dndir = 1;
+        cat = LCE_SCC_DN;
     }
     else {
         // Illegal key index
         os_clearMem(payload,len);
         return;
     }
-    micB0(devaddr, seqno, dndir, 1);
+    micB0(devaddr, seqno, cat, 1);
     AESaux[0]  = 0x01;
     os_copyMem(AESkey,key,16);
     os_aes(AES_CTR, payload, len);

@@ -18,15 +18,20 @@
 #include "eefs/eefs.h"
 #endif
 
+#if defined(SVC_pwrman)
+#include "pwrman/pwrman.h"
+#endif
+
 // HAL state
 static struct {
     s4_t irqlevel;
     u4_t ticks;
     int watchcount;
+    u4_t reset;
 #ifdef CFG_rtstats
     struct {
-        uint64_t run;                   // ticks running
-        uint64_t sleep[HAL_SLEEP_CNT];  // ticks sleeping
+        uint32_t run;                   // ticks running
+        uint32_t sleep[HAL_SLEEP_CNT];  // ticks sleeping
     } rtstats;
 #endif
     u1_t maxsleep[HAL_SLEEP_CNT-1]; // deep sleep restrictions
@@ -44,6 +49,7 @@ enum {
     PANIC_LSE_NOSTART   = 1,
     PANIC_CAL_FAILED    = 2,
     PANIC_STS_FAILED    = 3,
+    PANIC_SR_BUSY       = 4,
 };
 
 #ifdef CFG_panic911
@@ -336,6 +342,16 @@ static void time_init (void) {
 
     // start counting
     TIM22->CR1 = TIM_CR1_CEN;
+
+#if CFG_watchdog
+    // configure watchdog
+    IWDG->KR = 0xcccc;          // start
+    IWDG->KR = 0x5555;          // enable write
+    IWDG->PR = 4;               // prescaler: 64
+    IWDG->RLR = (1 << 12) - 1;  // 37kHz⁻¹ * 64 * 2^12 = ~7s
+    while( IWDG->SR );          // wait until ready
+    IWDG->KR = 0xaaaa;          // refresh
+#endif
 }
 
 __attribute__((noinline,used)) static void _time_irq (uint32_t addr) {
@@ -349,6 +365,9 @@ __attribute__((noinline,used)) static void _time_irq (uint32_t addr) {
             // fail and reboot
             ASSERT(0);
         }
+#if CFG_watchdog
+        IWDG->KR = 0xaaaa; // refresh
+#endif
     }
     if( (LPTIM1->ISR & LPTIM_ISR_CMPM) != 0 ) {
         LPTIM1->ICR = LPTIM_ICR_CMPMCF;
@@ -422,6 +441,9 @@ static u4_t sleep_htt_ltt (u4_t hticks, u4_t htt, u4_t ltt) {
 
         // increment hticks
         hticks += 1;
+#if CFG_watchdog
+        IWDG->KR = 0xaaaa; // refresh
+#endif
     }
 
     // correlate LPTIM1 and TIM22
@@ -653,8 +675,15 @@ u1_t hal_sleep (u1_t type, u4_t targettime) {
     return 1; // we slept
 }
 
+// short-term busy wait
+// shouldn't be used for extended periods of time
+// cannot possibly wait for more than 2 sec when interrupts are disabled because of timer overrun
 void hal_waitUntil (u4_t time) {
-    while( ((s4_t) time - (s4_t) hal_ticks()) > 0 ); // busy wait until timestamp is reached
+    // assure waiting period is in intended range of up to 1 sec (and hasn't expired too long ago)
+    ostime_t diff = time - hal_ticks();
+    ASSERT(diff > -sec2osticks(1) && diff < sec2osticks(1));
+    // busy wait until timestamp is reached
+    while( ((s4_t) time - (s4_t) hal_ticks()) > 0 );
 }
 
 void hal_setMaxSleep (unsigned int level) {
@@ -677,18 +706,23 @@ void hal_clearMaxSleep (unsigned int level) {
 // I/O
 
 static void hal_io_init () {
-#ifdef CFG_rxtx_always_on
-#if defined(GPIO_RX) && ((GPIO_RX & BRD_GPIO_EXT_PULLUP) == 0)
-    SET_PIN(GPIO_RX, 1);
+#ifndef CFG_noradio
+#if defined(GPIO_RX)
+    SET_PIN_ONOFF(GPIO_RX, 0);
     CFG_PIN(GPIO_RX, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
 #endif
-#if defined(GPIO_TX) && ((GPIO_TX & BRD_GPIO_EXT_PULLDN) == 0)
-    SET_PIN(GPIO_TX, 0);
+#if defined(GPIO_TX)
+    SET_PIN_ONOFF(GPIO_TX, 0);
     CFG_PIN(GPIO_TX, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
 #endif
+#if defined(GPIO_TX2)
+    SET_PIN_ONOFF(GPIO_TX2, 0);
+    CFG_PIN(GPIO_TX2, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
 #endif
-
-#ifndef CFG_noradio
+#ifdef GPIO_TXRX_EN
+    SET_PIN_ONOFF(GPIO_TXRX_EN, 0);
+    CFG_PIN(GPIO_TXRX_EN, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
+#endif
 #ifdef GPIO_DIO0
     IRQ_PIN(GPIO_DIO0, GPIO_IRQ_RISING);
 #endif
@@ -697,6 +731,9 @@ static void hal_io_init () {
 #endif
 #ifdef GPIO_DIO2
     IRQ_PIN(GPIO_DIO2, GPIO_IRQ_RISING);
+#endif
+#ifdef GPIO_DIO3
+    IRQ_PIN(GPIO_DIO3, GPIO_IRQ_RISING);
 #endif
 #endif
 }
@@ -716,57 +753,40 @@ bool hal_pin_tcxo (u1_t val) {
 #endif
 }
 
-// val == 1  => tx 1, rx 0 ; val == 0 => tx 0, rx 1 ;  val == -1 => off
-void hal_pin_rxtx (s1_t val) {
-#ifdef CFG_powerstats
+void hal_ant_switch (u1_t val) {
+#ifdef SVC_pwrman
     static ostime_t t1;
-    static uint64_t* pt;
+    static int ctype;
+    static uint32_t radio_ua;
     ostime_t now = hal_ticks();
-    if (pt) {
-        *pt += (now - t1);
+    if( radio_ua ) {
+        pwrman_consume(ctype, now - t1, radio_ua);
+        radio_ua = 0;
     }
 #endif
-    ASSERT(val == 1 || val == 0 || val == -1);
-    if (val < 0) {
-#ifdef CFG_powerstats
-        pt = NULL;
-#endif
+    if (val == HAL_ANTSW_OFF) {
 #ifdef GPIO_TXRX_EN
-        SET_PIN(GPIO_TXRX_EN, 0);
-        CFG_PIN_DEFAULT(GPIO_TXRX_EN);
-#endif
-#ifndef CFG_rxtx_always_on
-#ifdef GPIO_RX
-        CFG_PIN_DEFAULT(GPIO_RX);
-#endif
-#ifdef GPIO_TX
-        CFG_PIN_DEFAULT(GPIO_TX);
-#endif
+        SET_PIN_ONOFF(GPIO_TXRX_EN, 0);
 #endif
     } else {
-#ifdef CFG_powerstats
+#ifdef SVC_pwrman
         t1 = now;
-        pt = (val == 0) ? &HAL.stats.rx : &HAL.stats.tx;
+        ctype = (val == HAL_ANTSW_RX) ? PWRMAN_C_RX : PWRMAN_C_TX;
+        radio_ua = LMIC.radioPwr_ua;
 #endif
 #ifdef GPIO_TXRX_EN
-        SET_PIN(GPIO_TXRX_EN, 1);
-        CFG_PIN(GPIO_TXRX_EN, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
-#endif
-#ifdef GPIO_RX
-        SET_PIN(GPIO_RX, val ^ 1);
-#endif
-#ifdef GPIO_TX
-        SET_PIN(GPIO_TX, val);
-#endif
-#ifndef CFG_rxtx_always_on
-#ifdef GPIO_RX
-        CFG_PIN(GPIO_RX, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
-#endif
-#ifdef GPIO_TX
-        CFG_PIN(GPIO_TX, GPIOCFG_MODE_OUT | GPIOCFG_OSPEED_40MHz | GPIOCFG_OTYPE_PUPD | GPIOCFG_PUPD_NONE);
-#endif
+        SET_PIN_ONOFF(GPIO_TXRX_EN, 1);
 #endif
     }
+#ifdef GPIO_RX
+    SET_PIN_ONOFF(GPIO_RX, (val == HAL_ANTSW_RX));
+#endif
+#ifdef GPIO_TX
+    SET_PIN_ONOFF(GPIO_TX, (val == HAL_ANTSW_TX));
+#endif
+#ifdef GPIO_TX2
+    SET_PIN_ONOFF(GPIO_TX2, (val == HAL_ANTSW_TX2));
+#endif
 }
 
 // set radio RST pin to given value (or keep floating!)
@@ -823,6 +843,10 @@ static void EXTI_IRQHandler () {
     // DIO 2
     DIO_UPDATE(2, &diomask, &now);
 #endif
+#ifdef GPIO_DIO3
+    // DIO 3
+    DIO_UPDATE(3, &diomask, &now);
+#endif
 
     if(diomask) {
         // invoke radio handler (on IRQ)
@@ -878,6 +902,9 @@ void hal_irqmask_set (int mask) {
 #ifdef GPIO_DIO2
     dio_config(mask, HAL_IRQMASK_DIO2, GPIO_DIO2);
 #endif
+#ifdef GPIO_DIO3
+    dio_config(mask, HAL_IRQMASK_DIO3, GPIO_DIO3);
+#endif
 
     mask = (mask != 0);
     if (prevmask != mask) {
@@ -908,32 +935,53 @@ void hal_enableIRQs () {
 }
 
 #ifdef CFG_rtstats
-void hal_rtstats_get (hal_rtstats* stats) {
-    stats->run_ms = osticks2ms(HAL.rtstats.run);
-    for( int i = 0; i < HAL_SLEEP_CNT; i++ ) {
-        stats->sleep_ms[i] = osticks2ms(HAL.rtstats.sleep[i]);
-    }
-}
-
-void hal_rtstats_consume (hal_rtstats* stats) {
-    HAL.rtstats.run -= ms2osxticks(stats->run_ms);
-    for( int i = 0; i < HAL_SLEEP_CNT; i++ ) {
-        HAL.rtstats.sleep[i] -= ms2osxticks(stats->sleep_ms[i]);
-    }
-}
-
-static void collect (uint32_t* dst_ms, uint64_t* source_ticks) {
-    uint32_t ms = osticks2ms(*source_ticks);
-    *dst_ms += ms;
-    *source_ticks -= ms2osxticks(ms);
-}
-
 void hal_rtstats_collect (hal_rtstats* stats) {
-    collect(&stats->run_ms, &HAL.rtstats.run);
+    stats->run_ticks = HAL.rtstats.run;
+    HAL.rtstats.run = 0;
     for( int i = 0; i < HAL_SLEEP_CNT; i++ ) {
-        collect(&stats->sleep_ms[i], &HAL.rtstats.sleep[i]);
+        stats->sleep_ticks[i] = HAL.rtstats.sleep[i];
+        HAL.rtstats.sleep[i] = 0;
     }
 }
+#endif
+
+
+#ifdef BRD_borlevel
+// -----------------------------------------------------------------------------
+// Brown-out reset
+
+__fastcode static void write_optbyte (volatile uint32_t* pdest, uint32_t data) {
+    // unlock data eeprom memory and registers
+    FLASH->PEKEYR = 0x89ABCDEF; // FLASH_PEKEY1
+    FLASH->PEKEYR = 0x02030405; // FLASH_PEKEY2
+
+    // unlock option bytes area
+    FLASH->OPTKEYR = 0xFBEAD9C8; // FLASH_OPTKEY1
+    FLASH->OPTKEYR = 0x24252627; // FLASH_OPTKEY2
+
+    // write option byte with complement
+    *pdest = data | (~data << 16);
+
+    // wait for programming to complete
+    SAFE_while(PANIC_SR_BUSY, FLASH->SR & FLASH_SR_BSY);
+
+    // check status
+    ASSERT(FLASH->SR & FLASH_SR_EOP);
+    FLASH->SR = FLASH_SR_EOP;
+
+    // reload option bytes (causes reset)
+    FLASH->PECR |= FLASH_PECR_OBL_LAUNCH;
+}
+
+static void setbrownout (int level) {
+    unsigned int user = OB->USER & 0xffff;
+    if( (user & 0xf) != level ) {
+        write_optbyte(&OB->USER, (user & ~0xf) | level);
+        // not reached
+        ASSERT(0);
+    }
+}
+
 #endif
 
 
@@ -948,7 +996,14 @@ void hal_init (void* bootarg) {
     HAL.boottab = bootarg;
     HAL.battlevel = MCMD_DEVS_BATT_NOINFO;
 
-    ASSERT(HAL.boottab->version >= 0x102); // require bootloader v258 (wr_flash, sha256)
+    HAL.reset = RCC->CSR;
+    RCC->CSR |= RCC_CSR_RMVF;
+
+    ASSERT(HAL.boottab->version >= 0x105); // require bootloader v261
+
+#ifdef BRD_borlevel
+    setbrownout(BRD_borlevel);
+#endif
 
     hal_disableIRQs();
 
@@ -1079,7 +1134,7 @@ void hal_setBattLevel (u1_t level) {
 static void debug_init (void) {
     // configure USART (115200/8N1, tx-only)
     DBG_USART_enable();
-    DBG_USART->BRR = 278; // 115200 (APB1 clock @32MHz)
+    DBG_USART->BRR = 16; // 2000000 baud (APB1 clock @32MHz)
     DBG_USART->CR1 = USART_CR1_UE | USART_CR1_TE; // usart + transmitter enable
     DBG_USART_disable();
 #if CFG_DEBUG != 0
@@ -1115,7 +1170,7 @@ void hal_fwinfo (hal_fwi* fwi) {
     extern volatile hal_fwhdr fwhdr;
     fwi->version = fwhdr.version;
     fwi->crc = fwhdr.boot.crc;
-    fwi->flashsz = FLASH_SIZE;
+    fwi->flashsz = FLASH_SZ;
 }
 
 u4_t hal_unique (void) {
@@ -1170,8 +1225,12 @@ bool hal_set_update (void* ptr) {
     return HAL.boottab->update(ptr, NULL) == BOOT_OK;
 }
 
-void flash_write (uint32_t* dst, uint32_t* src, uint32_t nwords, bool erase) {
+void flash_write (void* dst, const void* src, unsigned int nwords, bool erase) {
     hal_disableIRQs();
     HAL.boottab->wr_flash(dst, src, nwords, erase);
     hal_enableIRQs();
+}
+
+void hal_logEv (uint8_t evcat, uint8_t evid, uint32_t evparam) {
+    // XXX:TBD
 }

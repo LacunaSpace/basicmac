@@ -18,13 +18,24 @@ extern "C"{
 #define LCE_MCGRP_0   ( 0)
 #define LCE_MCGRP_MAX ( 2)
 
+// Stream cipher categories (lce_cipher(..,cat,..):
+// Distinct use of the AppSKey must use different key classes
+// or plain text will leak:
+enum {
+    LCE_SCC_UP   = 0,     // std LoRaWAN uplink frame
+    LCE_SCC_DN   = 1,     // std LoRaWAN downlink frame
+    LCE_SCC_FUP  = 0x40,  // file upload
+    LCE_SCC_DSE  = 0x41,  // data streaming engine
+    LCE_SCC_ROSE = 0x42,  // reliable octet streaming engine
+};
+
 void lce_encKey0 (u1_t* buf);
 u4_t lce_micKey0 (u4_t devaddr, u4_t seqno, u1_t* pdu, int len);
 bool lce_processJoinAccept (u1_t* jacc, u1_t jacclen, u2_t devnonce);
 void lce_addMicJoinReq (u1_t* pdu, int len);
 bool lce_verifyMic (s1_t keyid, u4_t devaddr, u4_t seqno, u1_t* pdu, int len);
 void lce_addMic (s1_t keyid, u4_t devaddr, u4_t seqno, u1_t* pdu, int len);
-void lce_cipher (s1_t keyid, u4_t devaddr, u4_t seqno, int dndir, u1_t* payload, int len);
+void lce_cipher (s1_t keyid, u4_t devaddr, u4_t seqno, int cat, u1_t* payload, int len);
 #if defined(CFG_lorawan11)
 void lce_loadSessionKeys (const u1_t* nwkSKey, const u1_t* nwkSKeyDn, const u1_t* appSKey);
 #else

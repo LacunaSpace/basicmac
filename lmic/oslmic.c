@@ -4,8 +4,8 @@
 // This file is subject to the terms and conditions defined in file 'LICENSE',
 // which is part of this source code package.
 
-#include "aes.h"
 #include "lmic.h"
+#include "aes.h"
 #include "peripherals.h"
 
 // RUNTIME STATE
@@ -22,7 +22,7 @@ void os_init (void* bootarg) {
     memset(&OS, 0x00, sizeof(OS));
     hal_init(bootarg);
 #ifndef CFG_noradio
-    radio_init();
+    radio_init(false);
 #endif
     LMIC_init();
 }
@@ -89,13 +89,17 @@ static int unlinkjob (osjob_t** pnext, osjob_t* job) {
     return 0;
 }
 
+// NOTE: since the job queue might begin with jobs which already have a shortly expired deadline, we cannot use
+//       the maximum span of ostime to schedule the next job (otherwise it would be queued in first)!
+#define XJOBTIME_MAX_DIFF (OSTIME_MAX_DIFF / 2)
+
 // update schedule of extended job
 static void extendedjobcb (osxjob_t* xjob) {
     hal_disableIRQs();
     osxtime_t now = os_getXTime();
-    if (xjob->deadline - now > OSTIME_MAX_DIFF) {
+    if (xjob->deadline - now > XJOBTIME_MAX_DIFF) {
 	// schedule intermediate callback
-	os_setTimedCallbackEx((osjob_t*) xjob, (ostime_t) (now + OSTIME_MAX_DIFF), (osjobcb_t) extendedjobcb, OSJOB_FLAG_APPROX);
+	os_setTimedCallbackEx((osjob_t*) xjob, (ostime_t) (now + XJOBTIME_MAX_DIFF), (osjobcb_t) extendedjobcb, OSJOB_FLAG_APPROX);
     } else {
 	// schedule final callback
 	os_setTimedCallbackEx((osjob_t*) xjob, (ostime_t) xjob->deadline, xjob->func, OSJOB_FLAG_APPROX);
@@ -131,8 +135,11 @@ void os_setTimedCallbackEx (osjob_t* job, ostime_t time, osjobcb_t cb, unsigned 
     // remove if job was already queued
     unlinkjob(&OS.scheduledjobs, job);
     // fill-in job
+    ostime_t now = os_getTime();
     if( flags & OSJOB_FLAG_NOW ) {
-        time = os_getTime();
+        time = now;
+    } else if ( time - now <= 0 ) {
+	flags |= OSJOB_FLAG_NOW;
     }
     job->deadline = time;
     job->func = cb;
@@ -179,10 +186,22 @@ void os_runstep (void) {
         hal_enableIRQs();
     }
     if (j) { // run job callback
+#ifdef CFG_warnjobs
+        // warn about late execution of precisely timed jobs
+        ostime_t delta = 0;
+        if ( (j->flags & (OSJOB_FLAG_NOW | OSJOB_FLAG_APPROX) ) == 0) {
+            delta = os_getTime() - j->deadline;
+        }
+#endif
 	// Only print when interrupts are enabled, some Arduino cores do
 	// not handle printing with IRQs disabled
 	if( (j->flags & OSJOB_FLAG_IRQDISABLED) == 0) {
             debug_verbose_printf("Running job %u, cb %u, deadline %t\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline);
+#ifdef CFG_warnjobs
+            if ( delta > 1 ) {
+                debug_printf("WARNING: job 0x%08x (func 0x%08x) executed %d ticks late\r\n", j, j->func, delta);
+            }
+#endif
 	}
 	hal_watchcount(30); // max 60 sec
 	j->func(j);
@@ -190,6 +209,11 @@ void os_runstep (void) {
 	// If we could not print before, at least print after
 	if( (j->flags & OSJOB_FLAG_IRQDISABLED) != 0) {
 	    debug_verbose_printf("Ran job %u, cb %u, deadline %F\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline, 0);
+#ifdef CFG_warnjobs
+            if ( delta > 1 ) {
+                debug_printf("WARNING: job 0x%08x (func 0x%08x) executed %d ticks late\r\n", j, j->func, delta);
+            }
+#endif
 	}
     }
 }
@@ -199,4 +223,12 @@ void os_runloop (void) {
     while (1) {
 	os_runstep();
     }
+}
+
+static u1_t evcatEn = 0xFF;
+
+void os_logEv (uint8_t evcat, uint8_t evid, uint32_t evparam) {
+    if( evcat >= EVCAT_MAX && evcat < sizeof(evcatEn)*8 && (evcatEn & (1<<evcat)) == 0 )
+        return;
+    hal_logEv(evcat, evid, evparam);
 }

@@ -26,9 +26,13 @@ void hal_init (void* bootarg);
 void hal_watchcount (int cnt);
 
 /*
- * drive radio RX/TX pins (0=rx, 1=tx, -1=off [initial]).
+ * drive antenna switch (and account power consumption)
  */
-void hal_pin_rxtx (s1_t val);
+#define HAL_ANTSW_OFF  0
+#define HAL_ANTSW_RX   1
+#define HAL_ANTSW_TX   2
+#define HAL_ANTSW_TX2  3
+void hal_ant_switch (u1_t val);
 
 /*
  * control radio TCXO power (0=off, 1=on)
@@ -48,11 +52,12 @@ bool hal_pin_rst (u1_t val);
 void hal_pin_busy_wait (void);
 
 /*
- * set DIO0/1/2 interrupt mask
+ * set DIO0/1/2/3 interrupt mask
  */
 #define HAL_IRQMASK_DIO0 (1<<0)
 #define HAL_IRQMASK_DIO1 (1<<1)
 #define HAL_IRQMASK_DIO2 (1<<2)
+#define HAL_IRQMASK_DIO3 (1<<3)
 void hal_irqmask_set (int mask);
 
 /*
@@ -154,6 +159,9 @@ u4_t  hal_unique (void);
 u4_t hal_dnonce_next (void);
 
 void hal_reboot (void);
+bool hal_set_update (void* ptr);
+
+void hal_logEv (uint8_t evcat, uint8_t evid, uint32_t evparam);
 
 #ifdef __cplusplus
 } // extern "C"

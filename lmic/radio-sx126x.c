@@ -172,7 +172,7 @@ static const u2_t LORA_RXDONE_FIXUP_500[] = {
 
 // radio state
 static struct {
-    unsigned int calibrated:1, sleeping:1;
+    unsigned int sleeping:1;
 } state;
 
 // ----------------------------------------
@@ -367,11 +367,6 @@ static void CalibrateImage (uint32_t freq) {
 
 // set rf frequency (in Hz)
 static void SetRfFrequency (uint32_t freq) {
-    // perform image calibration once
-    if (state.calibrated == 0) {
-	CalibrateImage(freq);
-	state.calibrated = 1;
-    }
     // set frequency
     uint8_t buf[4];
     os_wmsbf4(buf, (uint32_t) (((uint64_t) freq << 25) / 32000000));
@@ -474,7 +469,7 @@ static void SetDioIrqParams (uint16_t mask) {
 }
 
 // set tx power (in dBm)
-static void SetTxPower (s1_t pw) {
+static void SetTxPower (int pw) {
 #if defined(BRD_sx1261_radio)
     // low power PA: -17 ... +14 dBm
     if (pw > 14) pw = 14;
@@ -557,7 +552,7 @@ static void txlora (void) {
     SetRfFrequency(LMIC.freq);
     SetModulationParamsLora(LMIC.rps);
     SetPacketParamsLora(LMIC.rps, LMIC.dataLen, 0);
-    SetTxPower(LMIC.txpow + LMIC.txPowAdj + TX_ERP_ADJ); // bandpow + MACadj/APIadj + ERPadj
+    SetTxPower(LMIC.txpow + LMIC.brdTxPowOff);
     SetSyncWordLora(0x3444);
     WriteFifo(LMIC.frame, LMIC.dataLen);
     ClearIrqStatus(IRQ_ALL);
@@ -567,7 +562,7 @@ static void txlora (void) {
     hal_irqmask_set(HAL_IRQMASK_DIO1);
 
     // antenna switch / power accounting
-    hal_pin_rxtx(1);
+    hal_ant_switch(HAL_ANTSW_TX);
 
     // now we actually start the transmission
     BACKTRACE();
@@ -586,7 +581,7 @@ static void txfsk (void) {
     SetCrc16(0x1D0F, 0x1021); // CCITT
     SetWhiteningSeed(0x01FF);
     SetSyncWordFsk(0xC194C1);
-    SetTxPower(LMIC.txpow + LMIC.txPowAdj + TX_ERP_ADJ); // bandpow + MACadj/APIadj + ERPadj
+    SetTxPower(LMIC.txpow + LMIC.brdTxPowOff);
     WriteFifo(LMIC.frame, LMIC.dataLen);
     ClearIrqStatus(IRQ_ALL);
     SetDioIrqParams(IRQ_TXDONE | IRQ_TIMEOUT);
@@ -595,7 +590,7 @@ static void txfsk (void) {
     hal_irqmask_set(HAL_IRQMASK_DIO1);
 
     // antenna switch / power accounting
-    hal_pin_rxtx(1);
+    hal_ant_switch(HAL_ANTSW_TX);
 
     // now we actually start the transmission
     BACKTRACE();
@@ -608,13 +603,13 @@ static void txcw (void) {
     SetDIO3AsTcxoCtrl();
     SetStandby(STDBY_RC);
     SetRfFrequency(LMIC.freq);
-    SetTxPower(LMIC.txpow + LMIC.txPowAdj + TX_ERP_ADJ); // bandpow + MACadj/APIadj + ERPadj
+    SetTxPower(LMIC.txpow + LMIC.brdTxPowOff);
     ClearIrqStatus(IRQ_ALL);
 
     // antenna switch / power accounting
-    hal_pin_rxtx(1);
+    hal_ant_switch(HAL_ANTSW_TX);
 
-    // start tx of wave (indefinitely, ended by RADIO_RST)
+    // start tx of wave (indefinitely, ended by RADIO_STOP)
     BACKTRACE();
     SetTxContinuousWave();
 }
@@ -669,7 +664,7 @@ static void rxfsk (bool rxcontinuous) {
     if (rxcontinuous) { // continous rx
 	BACKTRACE();
 	// enable antenna switch for RX (and account power consumption)
-	hal_pin_rxtx(0);
+	hal_ant_switch(HAL_ANTSW_RX);
 	// rx infinitely (no timeout, until rxdone, will be restarted)
 	SetRx(0);
     } else { // single rx
@@ -677,7 +672,7 @@ static void rxfsk (bool rxcontinuous) {
 	// busy wait until exact rx time
         hal_waitUntil(LMIC.rxtime);
 	// enable antenna switch for RX (and account power consumption)
-	hal_pin_rxtx(0);
+	hal_ant_switch(HAL_ANTSW_RX);
 	// rx for max LMIC.rxsyms symbols (rxsyms = nbytes for FSK)
 	SetRx((LMIC.rxsyms << 9) / 50); // nbytes * 8 * 64 * 1000 / 50000
     }
@@ -697,7 +692,7 @@ static void rxlora (bool rxcontinuous) {
     SetPacketParamsLora(LMIC.rps, 255, !LMIC.noRXIQinversion);
     SetSyncWordLora(0x3444);
     StopTimerOnPreamble(0);
-    SetLoRaSymbNumTimeout((LMIC.rxsyms < 6) ? 6 : LMIC.rxsyms); // (MacParamsDefaults.MinRxSymbols = 6)
+    SetLoRaSymbNumTimeout(LMIC.rxsyms);
     SetDioIrqParams(IRQ_RXDONE | IRQ_TIMEOUT);
 
     ClearIrqStatus(IRQ_ALL);
@@ -721,7 +716,7 @@ static void rxlora (bool rxcontinuous) {
     if (rxcontinuous) { // continous rx
 	BACKTRACE();
 	// enable antenna switch for RX (and account power consumption)
-	hal_pin_rxtx(0);
+	hal_ant_switch(HAL_ANTSW_RX);
 	// rx infinitely (no timeout, until rxdone, will be restarted)
 	SetRx(0);
     } else { // single rx
@@ -729,7 +724,7 @@ static void rxlora (bool rxcontinuous) {
 	// busy wait until exact rx time
         hal_waitUntil(LMIC.rxtime);
 	// enable antenna switch for RX (and account power consumption)
-	hal_pin_rxtx(0);
+	hal_ant_switch(HAL_ANTSW_RX);
 	// rx for max LMIC.rxsyms symbols
 	SetRx(0); // (infinite, timeout set via SetLoRaSymbNumTimeout)
     }
@@ -738,6 +733,11 @@ static void rxlora (bool rxcontinuous) {
 
 void radio_cca () {
     LMIC.rssi = -127; //XXX:TBD
+}
+
+void radio_cad (void) {
+    // not yet...
+    ASSERT(0);
 }
 
 void radio_startrx (bool rxcontinuous) {
@@ -749,7 +749,7 @@ void radio_startrx (bool rxcontinuous) {
 }
 
 // reset radio
-void radio_reset (void) {
+static void radio_reset (void) {
     // drive RST pin low
     bool has_reset = hal_pin_rst(0);
 
@@ -770,10 +770,10 @@ void radio_reset (void) {
     ASSERT( ReadReg(REG_LORASYNCWORDLSB) == 0x24 );
 
     // initialize state
-    state.sleeping = state.calibrated = 0;
+    state.sleeping = 0;
 }
 
-void radio_init (void) {
+void radio_init (bool calibrate) {
     hal_disableIRQs();
 
     // reset radio (FSK/STANDBY)
@@ -781,6 +781,10 @@ void radio_init (void) {
 
     // check reset value
     ASSERT( ReadReg(REG_LORASYNCWORDLSB) == 0x24 );
+
+    if (calibrate) {
+	CalibrateImage(LMIC.freq);
+    }
 
     // go to SLEEP mode
     radio_sleep();
@@ -822,6 +826,9 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
 	    BACKTRACE();
             // indicate timeout
             LMIC.dataLen = 0;
+#ifdef DEBUG_RX
+	    debug_printf("RX[freq=%.1F,FSK]: TIMEOUT\r\n", LMIC.freq, 6);
+#endif
         } else {
 	    // unexpected irq
 	    debug_printf("UNEXPECTED RADIO IRQ %04x (after %ld ticks, %.1Fms)\r\n", irqflags, irqtime - LMIC.rxtime, osticks2us(irqtime - LMIC.rxtime), 3);
@@ -854,9 +861,8 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             }
 	    LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
 #ifdef DEBUG_RX
-	    debug_printf("RX[freq=%.1F,sf=%d,bw=%s,rssi=%d,snr=%.2F,len=%d]: %h\r\n",
-			 LMIC.freq, 6,
-			 getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
+	    debug_printf("RX[freq=%.1F,sf=%d,bw=%d,rssi=%d,snr=%.2F,len=%d]: %h\r\n",
+			 LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps),
 			 LMIC.rssi - RSSI_OFF, (s4_t)(LMIC.snr * 100 / SNR_SCALEUP), 2,
 			 LMIC.dataLen, LMIC.frame, LMIC.dataLen);
 #endif
@@ -864,6 +870,10 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
 	    BACKTRACE();
             // indicate timeout
             LMIC.dataLen = 0;
+#ifdef DEBUG_RX
+	    debug_printf("RX[freq=%.1F,sf=%d,bw=%d]: TIMEOUT\r\n",
+			 LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps));
+#endif
         } else {
 	    // unexpected irq
 	    debug_printf("UNEXPECTED RADIO IRQ %04x\r\n", irqflags);

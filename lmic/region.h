@@ -16,6 +16,7 @@ enum {
     REGCODE_US915 = 3,
     REGCODE_AU915 = 4,
     REGCODE_CN470 = 5,
+    REGCODE_IN865 = 6,
 };
 
 // ------------------------------------------------
@@ -108,6 +109,16 @@ enum {
 #undef MAX_FIX_CHNLS_125
 #define MAX_FIX_CHNLS_125 96
 #endif
+
+#endif
+
+
+// ------------------------------------------------
+// IN865
+#ifdef CFG_in865
+
+#define REG_DYN
+#define REG_DRTABLE_IN
 
 #endif
 

@@ -11,18 +11,68 @@ import sys
 import re
 import yaml
 
-from typing import Callable,Dict,List,Optional,Set,Tuple
+from collections import deque, OrderedDict
+
+from typing import Callable,Dict,List,Optional,Set,TextIO,Tuple
 from typing import cast
 from argparse import Namespace as NS # type alias
 
 from cc import CommandCollection
 
 class Service:
+    class Hook:
+        STYLE_ALL      = 0
+        STYLE_LAST     = 1
+        STYLE_FIRST_NZ = 2
+
+        STYLE_LOOKUP = {
+                None       : STYLE_ALL,
+                'last'     : STYLE_LAST,
+                'first_nz' : STYLE_FIRST_NZ,
+                }
+
+        def __init__(self, hd:str, fn:str) -> None:
+            m = re.match(r'^\s*(?:<(\w+):(\w+)>)?\s*(.+)\s+(\w+)\s*(\([^\)]+\))\s*$', hd)
+            if m:
+                self.name = m.group(4)
+                self.returntype = m.group(3)
+                self.returndefault = m.group(2)
+                self.style = self.STYLE_LOOKUP[m.group(1)]
+                self.template = f'{m.group(3)} %s {m.group(5)}'
+            else:
+                raise ValueError('%s: invalid function declaration "%s"' % (fn, hd))
+
+        def emit(self, fh:TextIO, hooks:List[str]) -> None:
+            for h in hooks:
+                fh.write(f'extern {self.template % h};\n')
+            if self.style == self.STYLE_ALL:
+                self._emit_all(fh, hooks)
+            elif self.style == self.STYLE_LAST:
+                self._emit_last(fh, hooks)
+            elif self.style == self.STYLE_FIRST_NZ:
+                self._emit_first_nz(fh, hooks)
+
+        def _emit_all(self, fh:TextIO, hooks:List[str]) -> None:
+            fh.write('#define SVCHOOK_%s(...) do { %s } while (0)\n' % (self.name,
+                ' '.join([('{ %s(__VA_ARGS__); }' % h) for h in hooks])))
+
+        def _emit_last(self, fh:TextIO, hooks:List[str]) -> None:
+            fh.write('#define SVCHOOK_%s(...) ({ %s __SVCHOOK_retval = %s; %s; __SVCHOOK_retval; })\n' % (self.name,
+                self.returntype, self.returndefault,
+                ' '.join([('{ __SVCHOOK_retval = %s(__VA_ARGS__); }' % h) for h in hooks])))
+
+        def _emit_first_nz(self, fh:TextIO, hooks:List[str]) -> None:
+            fh.write('#define SVCHOOK_%s(...) ({ %s __SVCHOOK_retval = %s; do { %s } while (0); __SVCHOOK_retval; })\n' % (self.name,
+                self.returntype, self.returndefault,
+                ' '.join([('{ %s __SVCHOOK_retval2 = %s(__VA_ARGS__); if( __SVCHOOK_retval2 ) { __SVCHOOK_retval = __SVCHOOK_retval2; break; } }'
+                    % (self.returntype, h)) for h in hooks])))
+
+
     def __init__(self, svcid:str, fn:str) -> None:
         self.id = svcid
         self.srcs     : List[str]                      = []
         self.hooks    : List[List[str]]                = []
-        self.hookdefs : Dict[str,List[str]]            = {}
+        self.hookdefs : Dict[str,List[str]]            = OrderedDict()
         self.require  : List[str]                      = []
         self.defines  : List[Tuple[str,Optional[str]]] = []
         self.fn = fn
@@ -37,7 +87,7 @@ class Service:
             elif k == 'hooks':
                 if not isinstance(v, list):
                     v = [ v ]
-                self.hooks.extend([Service.parse_hook(h, fn) for h in v])
+                self.hooks.extend([Service.Hook(h, fn) for h in v])
             elif k == 'require':
                 if not isinstance(v, list):
                     v = [ v ]
@@ -57,14 +107,6 @@ class Service:
                 raise ValueError('%s: unknown key %s' % (fn, k))
 
     @staticmethod
-    def parse_hook(hd:str, fn:str) -> List[str]:
-        m = re.match(r'^\s*(.+)\s+(\w+)\s*(\([^\)]+\))\s*$', hd)
-        if m:
-            return [ m.group(2), m.group(1) + ' %s ' + m.group(3) ]
-        else:
-            raise ValueError('%s: invalid function declaration "%s"' % (fn, hd))
-
-    @staticmethod
     def parse_define(dd:str, fn:str) -> Tuple[str,Optional[str]]:
         m = re.match(r'^([^=]+)(?:=(.*))?', dd)
         if m:
@@ -74,7 +116,7 @@ class Service:
 
 class ServiceCollection:
     def __init__(self) -> None:
-        self.svcs : Dict[str,Service] = {}
+        self.svcs : Dict[str,Service] = OrderedDict()
 
     def add(self, svc:Service) -> None:
         self.svcs[svc.id] = svc
@@ -93,13 +135,16 @@ class ServiceCollection:
                 '%s%s' % (k, '' if v is None else '=%s' % shlex.quote(v))
                 for svc in self.svcs.values() for k,v in svc.defines]
 
-    def hookdefs(self) -> Dict[str,Tuple[str,List[str]]]:
-        return { h[0]: (h[1], [hd for hds in (sv2.hookdefs.get(h[0])
-            for sv2 in self.svcs.values()) if hds is not None for hd in hds])
+    def hookdefs(self) -> Dict[Service.Hook,List[str]]:
+        return { h: [hd for hds in (sv2.hookdefs.get(h.name)
+            for sv2 in self.svcs.values()) if hds is not None for hd in hds]
             for sv1 in self.svcs.values() for h in sv1.hooks }
 
-    def unresolved(self) -> Set[str]:
-        return set([s for sl in [svc.require for svc in self.svcs.values()] for s in sl if s not in self.svcs])
+    def unresolved(self) -> List[str]:
+        return [s for sl in [svc.require for svc in self.svcs.values()] for s in sl if s not in self.svcs]
+
+    def contains(self, svcid:str) -> bool:
+        return svcid in self.svcs
 
 class ServiceToolUtil:
     @staticmethod
@@ -113,6 +158,11 @@ class ServiceToolUtil:
                     action='append',
                     help='paths to search for service definitions')
         raise ValueError()
+
+    @staticmethod
+    def hook_default(hook, defs) -> None:
+        print(f'hook: {hook}')
+        print(f'defs: {defs}')
 
 
 class ServiceTool:
@@ -130,14 +180,17 @@ class ServiceTool:
     @staticmethod
     def collect(args:NS) -> ServiceCollection:
         sc = ServiceCollection()
-        ss = set(args.svc)
-        while len(ss):
-            s = ss.pop()
-            svc = ServiceTool.load(s, args.path or ['.'])
-            if svc is None:
-                raise ValueError('Cannot find service description for "%s"' % s)
-            sc.add(svc)
-            ss.update(sc.unresolved())
+        sd = deque(args.svc)
+        i = 0
+        while len(sd):
+            s = sd.popleft()
+            if not sc.contains(s):
+                i += 1
+                svc = ServiceTool.load(s, args.path or ['.'])
+                if svc is None:
+                    raise ValueError('Cannot find service description for "%s"' % s)
+                sc.add(svc)
+                sd.extend(sc.unresolved())
         sc.validate()
         return sc
 
@@ -171,12 +224,15 @@ class ServiceTool:
     @CommandCollection.cmd(help='create the svcdef header file')
     def svcdefs(self, args:NS) -> None:
         sc = ServiceTool.collect(args)
+        guard = os.path.basename(args.output).replace('.', '_')
         with open(args.output, 'w') as fh:
             fh.write('// Automatically generated by %s\n\n' % ' '.join(sys.argv))
-            for h, defs in sc.hookdefs().items():
-                fh.write('#define SVCHOOK_%s(...) do { %s } while (0)\n' % (h,
-                    ' '.join(['{ extern %s; %s(__VA_ARGS__); }'
-                        % (defs[0] % f, f) for f in defs[1]])))
+            fh.write('#ifndef _%s_\n' % guard)
+            fh.write('#define _%s_\n' % guard)
+            for h, defs in sorted(sc.hookdefs().items(), key=lambda hd: hd[0].name):
+                h.emit(fh, defs)
+
+            fh.write('#endif\n')
         if args.d:
             with open(os.path.splitext(args.output)[0] + '.d', 'w') as fh:
                 deps = sc.files()

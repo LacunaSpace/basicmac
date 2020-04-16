@@ -15,7 +15,8 @@ same time.
 
 This master branch should be working, testing and contributions are
 welcome. There are still some rough edges, so this should not be
-considered a finished version.
+considered a finished version. The final 2.2 release by Semtech was only
+recently integrated and has seen limited testing.
 
 Initially, development of this repository has been quite unstable, with
 lots of history editing and rebasing, but the intention is to keep the
@@ -29,13 +30,16 @@ configuration.
 ### Relation to other projects
 
 BasicMAC is a privately developed fork of LMIC, which was released
-publically by Semtech in 2019. This repository borrows heavily from the
-Arduino LMIC port that was first published at
-https://github.com/matthijskooijman/arduino-lmic/. There are some other
-LMIC versions (notably https://github.com/mcci-catena/arduino-lmic) for
-Arduino based off matthijskooijman's version and have seen more
-development, but no effort has been made to incorporate any changes from
-there.
+publically by Semtech in 2019. In 2020, Semtech has announced it no
+longer intends to develop or support BasicMAC, so this repository is
+intended to become the primary repository for BasicMAC>
+
+This repository borrows heavily from the Arduino LMIC port that was
+first published at https://github.com/matthijskooijman/arduino-lmic/.
+There are some other LMIC versions (notably
+https://github.com/mcci-catena/arduino-lmic) for Arduino based off
+matthijskooijman's version and have seen more development, but no effort
+has been made to incorporate any changes from there.
 
 Ideally, all of these LMIC and BasicMAC-based projects would unify their
 efforts in a repository that is not Arduino-specific, but given that
@@ -88,6 +92,9 @@ does not fit in an atmega328p anymore. PROGMEM optimizations have not
 been applied yet, but those would only free up RAM, not flash (and now
 the ttn-otaa example compiles down to 35k of flash, with only 32k
 available).
+
+So far, only EU868 has been tested. Other regions are supported, but are
+not currently tested.
 
 ### Converting from LMIC
 

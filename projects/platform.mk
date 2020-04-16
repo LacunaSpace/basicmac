@@ -13,7 +13,8 @@ FAMILIES	:= $(subst -, ,$(TARGET))
 # ------------------------------------------------
 # Families
 
--include $(wildcard $(TOPDIR)/projects/fam-*.mk)
+FAM_MAKEFILES += $(wildcard $(TOPDIR)/projects/fam-*.mk)
+-include $(FAM_MAKEFILES)
 
 
 # ------------------------------------------------
@@ -31,13 +32,13 @@ ifeq ($(MCU:stm32%=stm32),stm32)
     CFLAGS	+= -DHAL_IMPL_INC=\"hal_stm32.h\"
     LDFLAGS	+= -nostartfiles
     LDFLAGS	+= $(addprefix -T,$(LD_SCRIPTS))
-    OOCFGS	+= flash.cfg
+    OOCFGS	+= $(TOOLSDIR)/openocd/flash.cfg
 ifeq ($(MCU),stm32l0)
     FLAGS	+= -mcpu=cortex-m0plus -mthumb
     CFLAGS	+= -I$(CMSIS)/Device/ST/STM32L0xx/Include/
     LD_SCRIPTS	+= $(HALDIR)/fw.ld
     OBJS_BLACKLIST += blipper.o
-    OBJS_BLACKLIST += i2c.o spi.o # these do not build yet for L0
+    OBJS_BLACKLIST += spi.o # these do not build yet for L0
 endif
 ifeq ($(MCU),stm32l1)
     FLAGS	+= -mcpu=cortex-m3 -mthumb
@@ -46,6 +47,7 @@ ifeq ($(MCU),stm32l1)
     OBJS_BLACKLIST += i2c.o adc.o # these do not build yet for L1
 endif
     ALL		+= $(BUILDDIR)/$(PROJECT).hex
+    ALL		+= $(BUILDDIR)/$(PROJECT).bin
     ALL		+= $(BUILDDIR)/$(PROJECT).zfw
     LOAD	 = loadhex
 endif
@@ -73,6 +75,7 @@ endif
 
 BL ?= $(TOPDIR)/basicloader
 BL_BRD ?= $(error "No basic loader board set")
+BL_BUILD ?= $(BL)/build/boards/$(BL_BRD)
 
 ifneq (ok,$(shell python3 -c 'import sys; print("ok" if sys.hexversion >= 0x03060000 else "")'))
     $(error "Python 3.6 or newer required")

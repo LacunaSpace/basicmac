@@ -12,7 +12,7 @@ ifneq (,$(filter nucleo_l073rz,$(FAMILIES)))
     DEFS	+= -DSTM32L0 -DSTM32L073xx
     DEFS	+= -DCFG_nucleo_board
     DEFS	+= -DBRD_IMPL_INC='"brd_devboards.h"'
-    OOCFGS	+= nucleo-l0.cfg
+    OOCFGS	+= $(TOOLSDIR)/openocd/nucleo-l0.cfg
     BL_BRD	:= NUCLEO-L073RZ
 endif
 
@@ -22,7 +22,7 @@ ifneq (,$(filter nucleo_l053r8,$(FAMILIES)))
     DEFS	+= -DSTM32L0 -DSTM32L053xx
     DEFS	+= -DCFG_nucleo_board
     DEFS	+= -DBRD_IMPL_INC='"brd_devboards.h"'
-    OOCFGS	+= nucleo-l0.cfg
+    OOCFGS	+= $(TOOLSDIR)/openocd/nucleo-l0.cfg
     BL_BRD	:= NUCLEO-L053R8
 endif
 
@@ -30,8 +30,12 @@ ifneq (,$(filter sx1272mbed,$(FAMILIES)))
     DEFS	+= -DCFG_sx1272mbed
 endif
 
-ifneq (,$(filter sx1276mbed,$(FAMILIES)))
-    DEFS	+= -DCFG_sx1276mbed
+ifneq (,$(filter sx1276mb1las,$(FAMILIES)))
+    DEFS	+= -DCFG_sx1276mb1las
+endif
+
+ifneq (,$(filter sx1276mb1mas,$(FAMILIES)))
+    DEFS	+= -DCFG_sx1276mb1mas
 endif
 
 ifneq (,$(filter sx1261mbed,$(FAMILIES)))
@@ -48,6 +52,6 @@ ifneq (,$(filter b_l072z_lrwan1,$(FAMILIES)))
     DEFS	+= -DSTM32L0 -DSTM32L072xx
     DEFS	+= -DCFG_b_l072Z_lrwan1_board
     DEFS	+= -DBRD_IMPL_INC='"brd_devboards.h"'
-    OOCFGS	+= nucleo-l0.cfg
+    OOCFGS	+= $(TOOLSDIR)/openocd/nucleo-l0.cfg
     BL_BRD	:= B-L072Z-LRWAN1
 endif

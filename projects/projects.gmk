@@ -47,7 +47,7 @@ else
 PATCHFLAGS	+= -v
 endif
 
-SRCS		 = $(notdir $(wildcard $(LMICDIR)/*.c $(AESDIR)/*.c $(HALDIR)/*.c *.c $(HALDIR)/*.S))
+SRCS		+= $(notdir $(wildcard $(LMICDIR)/*.c $(AESDIR)/*.c $(HALDIR)/*.c *.c $(HALDIR)/*.S))
 
 VPATH		+= $(LMICDIR) $(AESDIR) $(HALDIR)
 
@@ -79,7 +79,7 @@ OBJS		 = $(filter-out $(addprefix $(BUILDDIR)/,$(OBJS_BLACKLIST)),$(patsubst %,$
 ALL		?= error_all
 LOAD		?= error_load
 
-OOFLAGS		 = $(addprefix -f $(TOOLSDIR)/openocd/,$(OOCFGS))
+OOFLAGS		+= $(addprefix -f ,$(OOCFGS))
 
 BUILDDIRS	 = $(sort $(dir $(OBJS)))
 
@@ -110,7 +110,7 @@ $(BUILDDIR)/%.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILDDIR)/%.o: %.s
-	$(AS) $(ASFLAGS) $< -o $@ 
+	$(AS) $(ASFLAGS) $< -o $@
 
 $(BUILDDIR)/%.o: %.S
 	$(CC) -c $(ASFLAGS) $(ASDEFS) $< -o $@
@@ -135,6 +135,9 @@ $(BUILDDIR)/%.zfw: $(BUILDDIR)/%.unpatched.hex
 $(BUILDDIR)/%.hex: $(BUILDDIR)/%.zfw
 	$(ZFWTOOL) export $< $@
 
+$(BUILDDIR)/%.bin: $(BUILDDIR)/%.zfw
+	$(ZFWTOOL) export $< $@
+
 $(SVCDEFS_H): $(MAKE_DEPS) | $(BUILDDIRS)
 	$(SVCTOOL) svcdefs -o $@ -d $(SVCTOOLARGS)
 
@@ -147,7 +150,7 @@ loadhex: $(BUILDDIR)/$(PROJECT).hex
 	$(OPENOCD) $(OOFLAGS) -c "flash_ihex $<"
 
 loadbl:
-	$(OPENOCD) $(OOFLAGS) -c "flash_ihex $(BL)/build/boards/$(BL_BRD)/bootloader.hex"
+	$(OPENOCD) $(OOFLAGS) -c "flash_ihex $(BL_BUILD)/bootloader.hex"
 
 debug: $(BUILDDIR)/$(PROJECT).out
 	$(GDB) $< -ex 'target remote | $(OPENOCD) $(OOFLAGS) -c "gdb_port pipe;"' -ex "monitor reset halt"

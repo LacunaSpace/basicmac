@@ -9,7 +9,7 @@ src:
 
 hooks:
     - void lwm_event (ev_t)
-    - void lwm_downlink (int, unsigned char*, int, unsigned int)
+    - void lwm_downlink (int port, unsigned char* data, int dlen, unsigned int txrxFlags)
 
 
 # vim: syntax=yaml

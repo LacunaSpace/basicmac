@@ -33,7 +33,6 @@ typedef unsigned int	uint;
 typedef const char*	str_t;
 
 #include <string.h>
-#include "hal.h"
 #if !defined(CFG_simul)
 #include "debug.h"
 #endif
@@ -56,7 +55,17 @@ typedef const char*	str_t;
 extern "C"{
 #endif
 
-#define os_minmax(vmin,v,vmax) ((vmin)>(v)?(vmin):(vmax)<(v)?(vmax):(v))
+#define max(a,b)                                \
+    ({  __typeof__ (a) _a = (a);                \
+        __typeof__ (b) _b = (b);                \
+        _a > _b ? _a : _b; })
+
+#define min(a,b)                                \
+    ({  __typeof__ (a) _a = (a);                \
+        __typeof__ (b) _b = (b);                \
+        _a < _b ? _a : _b; })
+
+#define os_minmax(vmin,v,vmax) (max(vmin,min(v,vmax)))
 #define os_clearMem(a,b)   memset(a,0,b)
 #define os_copyMem(a,b,c)  memcpy(a,b,c)
 #define os_moveMem(a,b,c)  memmove(a,b,c)
@@ -107,6 +116,17 @@ extern u4_t AESKEY[];
 #endif
 #endif //defined(CFG_dse)
 
+#if defined(CFG_rose)
+#if defined(CFG_simul)
+#define DEFINE_ROSE
+#define DECLARE_ROSE extern struct rose_t* prose
+#define ROSE (*(prose))
+#else
+#define DEFINE_ROSE  struct rose_t ROSE
+#define DECLARE_ROSE extern struct rose_t ROSE
+#endif
+#endif //defined(CFG_rose)
+
 #if defined(CFG_simul)
 #define DEFINE_APP(t)
 #define DECLARE_APP(t) extern void* pappdata
@@ -128,6 +148,8 @@ void LOGIT(int lvl, char* fmt, ...);
 #else
 #define LOGIT(lvl, fmt, ...) debug_printf(fmt, ## __VA_ARGS__)
 #endif
+enum { EVCAT_ANY, EVCAT_BUDHA, EVCAT_MAX };
+void os_logEv(uint8_t evcat, uint8_t evid, uint32_t evparam);
 
 void os_init (void* bootarg);
 void os_runstep (void);
@@ -141,7 +163,7 @@ u1_t os_getRndU1 (void);
 #if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 #define RX_RAMPUP  (us2osticks(5000))
 #elif defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
-#define RX_RAMPUP  (us2osticksCeil(1475))
+#define RX_RAMPUP  (us2osticksCeil(2800))
 #else
 #define RX_RAMPUP  (0)
 #endif
@@ -181,6 +203,7 @@ typedef s8_t  osxtime_t;
 #define us2osticksRound(us) ((ostime_t)( ((s8_t)(us) * OSTICKS_PER_SEC + 500000) / 1000000))
 #define ms2osticksCeil(ms)  ((ostime_t)( ((s8_t)(ms) * OSTICKS_PER_SEC + 999) / 1000))
 #define ms2osticksRound(ms) ((ostime_t)( ((s8_t)(ms) * OSTICKS_PER_SEC + 500) / 1000))
+#define osticks2secCeil(os) ((s4_t)(((os) + (OSTICKS_PER_SEC - 1)) / OSTICKS_PER_SEC))
 // Extended versions
 #define us2osxticks(us)   ((osxtime_t)( ((s8_t)(us) * OSTICKS_PER_SEC) / 1000000))
 #define ms2osxticks(ms)   ((osxtime_t)( ((s8_t)(ms) * OSTICKS_PER_SEC)    / 1000))
@@ -207,6 +230,8 @@ struct osxjob_t {
     osxtime_t deadline;
     osjobcb_t func;
 };
+
+#include "hal.h"
 
 #ifndef HAS_os_calls
 
@@ -266,7 +291,7 @@ u1_t os_getBattLevel (void);
 u4_t os_rlsbf4 (const u1_t* buf);
 #endif
 #ifndef os_wlsbf4
-//! Write 32-bit quntity into buffer in little endian byte order.
+//! Write 32-bit quantity into buffer in little endian byte order.
 void os_wlsbf4 (u1_t* buf, u4_t value);
 #endif
 #ifndef os_rmsbf4
@@ -274,7 +299,7 @@ void os_wlsbf4 (u1_t* buf, u4_t value);
 u4_t os_rmsbf4 (const u1_t* buf);
 #endif
 #ifndef os_wmsbf4
-//! Write 32-bit quntity into buffer in big endian byte order.
+//! Write 32-bit quantity into buffer in big endian byte order.
 void os_wmsbf4 (u1_t* buf, u4_t value);
 #endif
 #ifndef os_rlsbf2
@@ -282,11 +307,19 @@ void os_wmsbf4 (u1_t* buf, u4_t value);
 u2_t os_rlsbf2 (const u1_t* buf);
 #endif
 #ifndef os_wlsbf2
-//! Write 16-bit quntity into buffer in little endian byte order.
+//! Write 16-bit quantity into buffer in little endian byte order.
 void os_wlsbf2 (u1_t* buf, u2_t value);
 #endif
+#ifndef os_rmsbf2
+//! Read 16-bit quantity from given pointer in big endian byte order.
+u2_t os_rmsbf2 (const u1_t* buf);
+#endif
+#ifndef os_wmsbf2
+//! Write 16-bit quantity into buffer in big endian byte order.
+void os_wmsbf2 (u1_t* buf, u2_t value);
+#endif
 #ifndef os_wlsbf3
-//! Write 24-bit quntity into buffer in little endian byte order.
+//! Write 24-bit quantity into buffer in little endian byte order.
 void os_wlsbf3 (u1_t* buf, u4_t value);
 #endif
 
@@ -298,7 +331,7 @@ void os_wlsbf3 (u1_t* buf, u4_t value);
 u2_t os_crc16 (u1_t* d, uint len);
 #endif
 
-#if defined(CFG_budha)
+#if defined(CFG_budha) // XXX:obsoleted by budha2 (service)
 // HAL support required by BUDHA:
 u1_t* os_getWSleepParams(void);
 void  os_setWSleepParams(u1_t* params);
@@ -316,8 +349,7 @@ s2_t  os_fwChunk(u1_t* p, u1_t len);
 
 // public radio functions
 void radio_irq_handler (u1_t dio, ostime_t ticks); // (used by EXTI_IRQHandler)
-void radio_init (void); // (used by os_init(),
-void radio_reset (void); // (used by uft, radio_init())
+void radio_init (bool calibrate); // (used by os_init())
 void radio_writeBuf (u1_t addr, u1_t* buf, u1_t len); // (used by perso)
 void radio_readBuf (u1_t addr, u1_t* buf, u1_t len); // (used by perso)
 void radio_set_irq_timeout (ostime_t timeout);
@@ -328,13 +360,8 @@ void radio_starttx (bool txcontinuous);
 void radio_startrx (bool rxcontinuous);
 void radio_sleep (void);
 void radio_cca (void);
-
-// adjust by antenna gain for effective radiated power
-#if defined(CFG_tx_erp_adj) && defined(CFG_eu868)
-#define TX_ERP_ADJ	(CFG_tx_erp_adj)
-#else
-#define TX_ERP_ADJ	0
-#endif
+void radio_cad (void);
+void radio_cw (void);
 
 #ifdef __cplusplus
 } // extern "C"

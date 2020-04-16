@@ -4,6 +4,7 @@
 # which is part of this source code package.
 
 from .eui import *
+import re
 
 __all__ = ['Eui']
 

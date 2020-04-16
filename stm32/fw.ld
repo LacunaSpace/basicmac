@@ -43,4 +43,9 @@ SECTIONS {
 	. = ALIGN(128);
 	__fw_end__ = .;
     } >FWFLASH
+
+    /DISCARD/ : {
+	*(.ARM)
+	*(.ARM*)
+    }
 }

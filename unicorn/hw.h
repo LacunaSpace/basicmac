@@ -1,6 +1,7 @@
-//  __ __   ___ __ __    _________________________________
-// (_ |_ |V| | |_ /  |_| (C) 2018-2018 Semtech Corporation
-// __)|__| | | |__\__| |               All rights reserved
+// Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
+//
+// This file is subject to the terms and conditions defined in file 'LICENSE',
+// which is part of this source code package.
 
 #ifndef _hw_h_
 #define _hw_h_
@@ -24,12 +25,12 @@
 #define PERSODATA_SZ            (APPDATA_BASE - PERSODATA_BASE)
 #define APPDATA_SZ              (EEPROM_END - APPDATA_BASE)
 
-
+#define PERIPH_FLASH
 #define FLASH_BASE              0x20000000
 #define FLASH_SZ                (128 * 1024)
 #define FLASH_END               (FLASH_BASE + FLASH_SZ)
 #define FLASH_PAGE_SZ           128
-
+#define FLASH_PAGE_NW		(FLASH_PAGE_SZ >> 2)
 
 #define PERIPH_USART
 #define USART_BR_9600	9600

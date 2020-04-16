@@ -1,12 +1,10 @@
-# Copyright (C) 2018-2018, Semtech Corporation.
-# All rights reserved.
+# Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
 #
-# This file is subject to the terms and conditions
-# defined in file 'LICENSE', which is part of this
-# source code package.
+# This file is subject to the terms and conditions defined in file 'LICENSE',
+# which is part of this source code package.
 
 from typing import Any, Awaitable, TextIO, Callable, Dict, Iterable, List, \
-        MutableMapping, Optional, Tuple, Union
+        MutableMapping, NamedTuple, Optional, Set, Tuple, Union
 from typing import cast
 
 import argparse
@@ -19,7 +17,7 @@ import sys
 import time
 import traceback
 
-from devsimul import LoraMsg, Rps, SimpleDnMedium, Simulation, TraceWriter, TrafficTrace, UpMedium
+from devsimul import LoraMsg, Medium, Rps, Simulation, TraceWriter, TrafficTrace
 from binascii import crc32
 from colorama import Fore, Style, init as colorama_init
 from itertools import chain
@@ -35,35 +33,79 @@ TestCase = Awaitable[bool]
 Session = MutableMapping[str,Any]
 DecoratedTestCase = Callable[[Any], TestCase]
 TestCaseDecorator = Callable[[DecoratedTestCase], DecoratedTestCase]
+CondFn = Callable[[lm.Msg],bool]
+
+class Band(NamedTuple):
+    name  : str
+    lower : int
+    upper : int
+    dc    : float
 
 class AirTimeStats:
-    def __init__(self) -> None:
-        self.t0   : Optional[float] = None
-        self.tt   : float           = 0
-        self.accu : float           = 0
-        self.mcnt : int             = 0
+    #BAND_ETSI_H1_6 = Band('h1.6', 869400000, 869650000, 0.1)
+    #BAND_ETSI_H1_4 = Band('h1.4', 868000000, 868600000, 0.01)
+    #BAND_ETSI_H1_7 = Band('h1.7', 869700000, 870000000, 0.01)
+    #BAND_ETSI_H1_3 = Band('h1.3', 863000000, 869650000, 0.001)
+
+    BAND_ETSI_H1_7 = Band('h1.7', 869400000, 869650000, 0.1)
+    BAND_ETSI_H1_4 = Band('h1.4', 865000000, 868000000, 0.01)
+    BAND_ETSI_H1_5 = Band('h1.5', 868000000, 868600000, 0.01)
+    BAND_ETSI_H1_9 = Band('h1.9', 869700000, 870000000, 0.01)
+    BAND_ETSI_H1_3 = Band('h1.3', 863000000, 865000000, 0.001)
+    BAND_ETSI_H1_6 = Band('h1.6', 868700000, 869200000, 0.001)
+
+    BANDS_ETSI = [ BAND_ETSI_H1_7, BAND_ETSI_H1_4, BAND_ETSI_H1_5, BAND_ETSI_H1_9, BAND_ETSI_H1_3, BAND_ETSI_H1_6 ]
+
+    def __init__(self, t0:Optional[float]=None,
+            bands:List[Band]=[]) -> None:
+        self.accu  : float           = 0
+        self.mcnt  : int             = 0
+        self.baccu : Dict[str,float] = {}
+        self.bcnt  : Dict[str,int]   = {}
+        self.faccu : Dict[str,float] = {}
+        self.fcnt  : Dict[str,int]   = {}
+
+        self.t0    = t0
+        self.t1    = t0
+        self.bands = bands
 
     def add(self, msg:LoraMsg) -> None:
         if self.t0 is None:
             self.t0 = msg.xbeg
-        self.tt += (msg.xend - self.t0)
-        self.t0 = msg.xend
-        self.accu += (msg.xend - msg.xbeg)
+        self.t1 = msg.xend
+        airtime = (msg.xend - msg.xbeg)
+        b = self.band(msg.freq)
+        if b:
+            self.baccu[b.name] = self.baccu.get(b.name, 0) + airtime
+            self.bcnt[b.name] = self.bcnt.get(b.name, 0) + 1
+        self.accu += airtime
         self.mcnt += 1
+        self.faccu[msg.freq] = self.faccu.get(msg.freq, 0) + airtime
+        self.fcnt[msg.freq] = self.fcnt.get(msg.freq, 0) + 1
 
-    def dc(self) -> float:
-        return self.accu / self.tt if self.tt else 0
+    def tt(self, t1:Optional[float]=None) -> float:
+        if t1 is None:
+            t1 = self.t1
+        return t1 - self.t0
 
-    def reset(self) -> None:
-        self.tt = 0
-        self.accu = 0
-        self.mcnt = 0
+    def dc(self, t1:Optional[float]=None) -> float:
+        tt = self.tt(t1)
+        return (self.accu / tt) if tt else 0
 
-class DeviceTest(SimpleDnMedium, UpMedium):
+    def dcs(self, t1:Optional[float]=None) -> Dict[Band,float]:
+        tt = self.tt(t1)
+        return { b: (self.baccu.get(b.name, 0) / tt) if tt else 0
+                for b in self.bands }
+
+    def band(self, freq:int) -> Band:
+        for b in self.bands:
+            if freq >= b.lower and freq <= b.upper:
+                return b
+        return None
+
+class DeviceTest(Medium):
     TESTS:List[Callable[['DeviceTest'],TestCase]] = []
     def __init__(self, sim:Simulation) -> None:
-        SimpleDnMedium.__init__(self)
-
         self.topts   : MutableMapping[TestCase,dict] = {}
         self.results : MutableMapping[TestCase,bool] = {}
         self.skip    : List[int] = []
@@ -75,6 +117,19 @@ class DeviceTest(SimpleDnMedium, UpMedium):
         self.collect_tests()
 
         colorama_init()
+
+
+    def reset_medium (self) -> None:
+        self.sim.medium.reset_medium()
+
+    def get_dn(self, rxon:int, rxtout:int, freq:int, rps:int, nsym:int=4, peek=False) -> Optional[LoraMsg]:
+        return self.sim.medium.get_dn(rxon, rxtout, freq, rps, nsym, peek)
+
+    def prune(self, ticks:int) -> List[LoraMsg]:
+        return self.sim.medium.prune(ticks)
+
+    def add_dn(self, msg:LoraMsg) -> None:
+        self.sim.medium.add_dn(msg)
 
     def collect_tests(self) -> None:
         self.tests   : List[TestCase] = []
@@ -112,8 +167,19 @@ class DeviceTest(SimpleDnMedium, UpMedium):
     #            return msg, m
     #        maxmsg -= 1
 
+    async def get_evlog(self) -> Tuple[int,int,int]:
+        return await self.sim.get_evlog()
+
+    def clear_evlog(self) -> List[Tuple[int,int,int]]:
+        return self.sim.clear_evlog()
+
     async def run(self) -> bool:
-        self.sim.attach(self, self)
+        try:
+            return await self._run()
+        finally:
+            await self.sim.shutdown()
+
+    async def _run(self) -> bool:
         self.results.clear()
 
         rt0 = time.time()
@@ -124,14 +190,15 @@ class DeviceTest(SimpleDnMedium, UpMedium):
         for i, t in enumerate(self.tests):
             if i not in self.skip:
                 print('_________________________________________________________')
-                print('Running %s...' % DeviceTest.getname(t))
+                print('Test#%d - Running %s...' % (i+1, DeviceTest.getname(t)))
                 if self.topts[t]['reboot']:
-                    self.sim.reset()
+                    await self.sim.reset()
+                    self.clear_evlog()           # drop all unconsumed events
                 try:
-                    self.results[t] = await t is True
+                    self.results[t] = await asyncio.wait_for(t, timeout=self.topts[t]['timeout']) is True
                 except:
                     print('%s%s%s' % (Fore.RED, traceback.format_exc(),
-                        Style.RESET_ALL))
+                                      Style.RESET_ALL))
                     self.results[t] = False
                 if not self.results[t] and self.quit_on_fail:
                     break
@@ -173,48 +240,55 @@ class DeviceTest(SimpleDnMedium, UpMedium):
         return s
 
     @staticmethod
-    def assert_eq(rcv:Any, exp:Any, explain:Optional[str]=None) -> None:
+    def assert_eq(rcv:Any, exp:Any, explain:Optional[str]=None, fmt:str='') -> None:
         assert rcv == exp, DeviceTest.explain_more(
-                f'received: {rcv}, expected: {exp}',
+                f'received: {rcv:{fmt}}, expected: {exp:{fmt}}',
                 explain=explain)
     assert_equals = assert_eq
 
     @staticmethod
-    def assert_ne(rcv:Any, exp:Any, explain:Optional[str]=None) -> None:
+    def assert_ne(rcv:Any, exp:Any, explain:Optional[str]=None, fmt:str='') -> None:
         assert rcv != exp, DeviceTest.explain_more(
-                'received: %r, expected: not %r' % (rcv, exp),
+                f'received: {rcv:{fmt}}, expected: not {exp:{fmt}}',
                 explain=explain)
 
     @staticmethod
     def assert_type(rcv:Any, exp:Any, explain:Optional[str]=None) -> None:
-        DeviceTest.assert_eq(type(rcv), exp, explain)
+        DeviceTest.assert_eq(type(rcv), exp, explain=explain)
 
     @staticmethod
-    def assert_range(rcv:Any, exp_min:Any, exp_max:Any, explain:Optional[str]=None) -> None:
+    def assert_range(rcv:Any, exp_min:Any, exp_max:Any, explain:Optional[str]=None, fmt:str='') -> None:
         assert rcv >= exp_min and rcv <= exp_max, DeviceTest.explain_more(
-                'received: %r, expected: %r <= x <= %r' % (rcv, exp_min, exp_max),
+                f'received: {rcv:{fmt}}, expected: {exp_min:{fmt}} <= x <= {exp_max:{fmt}}',
                 explain=explain)
 
     @staticmethod
-    def assert_ge(rcv:Any, exp:Any, explain:Optional[str]=None) -> None:
+    def assert_ge(rcv:Any, exp:Any, explain:Optional[str]=None, fmt:str='') -> None:
         assert rcv >= exp, DeviceTest.explain_more(
-                'received: %r, expected: x >= %r' % (rcv, exp),
+                f'received: {rcv:{fmt}}, expected: x >= {exp:{fmt}}',
                 explain=explain)
 
     @staticmethod
-    def assert_in(rcv:Any, exp:List[Any], explain:Optional[str]=None) -> None:
+    def assert_lt(rcv:Any, exp:Any, explain:Optional[str]=None, fmt:str='') -> None:
+        assert rcv < exp, DeviceTest.explain_more(
+                f'received: {rcv:{fmt}}, expected: x < {exp:{fmt}}',
+                explain=explain)
+
+    @staticmethod
+    def assert_in(rcv:Any, exp:List[Any], explain:Optional[str]=None, fmt:str='') -> None:
         assert rcv in exp, DeviceTest.explain_more(
-                'received: %r, expected one of: %s' % (
-                    rcv, ', '.join(('%r' % e) for e in exp)), explain=explain)
+                f'received: {rcv:{fmt}}, expected: one of: '
+                + ', '.join(f'{e:{fmt}}' for e in exp), explain=explain)
 
     @staticmethod
     def test(reboot:bool=True,
-            region:Optional[ld.Region]=None) -> TestCaseDecorator:
+             region:Optional[ld.Region]=None, timeout:Optional[float]=None) -> TestCaseDecorator:
         def _test(f:DecoratedTestCase) -> DecoratedTestCase:
             DeviceTest.TESTS.append(f)
             f.options = { # type: ignore
-                    'reboot': reboot,
-                    }
+                'reboot':  reboot,
+                'timeout': timeout,
+            }
             return f
         return _test
 
@@ -255,7 +329,7 @@ class SessionManager:
             return []
 
     def all(self) -> List[Session]:
-        return (v for d in self.sessions.values() for v in d.values())
+        return list(v for d in self.sessions.values() for v in d.values())
 
 class LWTrafficTrace(TrafficTrace):
     def __init__(self, io:Union[TextIO,TraceWriter],
@@ -379,10 +453,10 @@ class LWTrafficTrace(TrafficTrace):
 
         mhdr, addr, fctrl, seqno = struct.unpack_from('<BiBH', pdu)
 
-        dndir = int(bool(mhdr & lm.MHdr.DNFLAG))
+        dndir = bool(mhdr & lm.MHdr.DNFLAG)
 
         info.append(f'addr=0x{addr:08x}')
-        info.append('fctrl=' + self.format_fctrl(fctrl, not (mhdr & lm.MHdr.DNFLAG)))
+        info.append('fctrl=' + self.format_fctrl(fctrl, dndir))
         info.append(f'fcnt={seqno}')
 
         fol = fctrl & lm.FCtrl.OPTLEN
@@ -404,12 +478,12 @@ class LWTrafficTrace(TrafficTrace):
             sessions = self.sm.get(addr)
             for s in sessions:
                 fcnt = seqno # TODO - extend seqno to 32 bit from session context
-                cmic = lc.crypto.calcMic(s['nwkskey'], addr, fcnt, dndir, pdu)
+                cmic = lc.crypto.calcMic(s['nwkskey'], addr, fcnt, int(dndir), pdu)
                 if cmic == mic:
                     micstatus = ':ok'
                     if pl:
                         ppl = lc.crypto.cipher(s['appskey'] if pl[0] else s['nwkskey'],
-                                addr, seqno, dndir, pl[1:])
+                                addr, seqno, int(dndir), pl[1:])
                         info.append(f'data={ppl.hex()}')
                         if pl[0] == 0:
                             info.append(self.format_opts(ppl, dndir))
@@ -442,22 +516,36 @@ class LWTrafficTrace(TrafficTrace):
 class LoRaWANTest(DeviceTest):
     def __init__(self, args:argparse.Namespace) -> None:
         self.sm = SessionManager()
-        sim = Simulation(args.hexfiles,
-                ColoramaStream(sys.stdout, Fore.BLUE) if args.debug else None,
-                LWTrafficTrace(ColoramaStream(sys.stdout, Fore.CYAN), self.sm) if args.traffic else None)
+        if not args.dns:
+            sim = Simulation(self.put_up, args.hexfiles,
+                             ColoramaStream(sys.stdout, Fore.BLUE) if args.debug else None,
+                             LWTrafficTrace(ColoramaStream(sys.stdout, Fore.CYAN), self.sm) if args.traffic else None)
+        else:
+            from tcutils import Hardware
+            sim = Hardware(self.put_up, args)
         super().__init__(sim)
-        self.region = args.region
-        self.upchannels = self.region.upchannels.copy()
+        self.set_region(args.region)
         self.quit_on_fail = args.quit_on_fail
 
         self.session:Session = {}
         self.context:Session = {}
 
+        alltests = set(range(len(self.tests)))
+        skip:Set[int] = set()
         if args.tests:
-            alltests = set(range(len(self.tests)))
             if not alltests.issuperset(args.tests):
                 raise ValueError('Invalid test range specified')
-            self.skip = list(alltests.difference(args.tests))
+            skip.update(alltests.difference(args.tests))
+        if args.skip_tests:
+            if not alltests.issuperset(args.skip_tests):
+                raise ValueError('Invalid skip range specified')
+            skip.update(args.skip_tests)
+        if skip:
+            self.skip = sorted(skip)
+
+    def set_region(self, region:ld.Region) -> None:
+        self.region = region
+        self.upchannels = region.upchannels.copy()
 
     def rps2dr(self, rps:int) -> int:
         sf = Rps.getSf(rps)
@@ -488,7 +576,7 @@ class LoRaWANTest(DeviceTest):
     def dn_rx2(self) -> Tuple[int,int]:
         return (self.region.RX2Freq, self.dndr2rps(self.session['rx2dr']))
 
-    def process_join(self, msg:LoraMsg, rx2:bool=False, **kwargs:Any) -> None:
+    def process_join(self, msg:LoraMsg, rx2:bool=False, **kwargs:Any) -> lm.Msg:
         m = lm.unpack_nomic(msg.pdu)
         assert m['msgtype'] == 'jreq'
 
@@ -545,9 +633,14 @@ class LoRaWANTest(DeviceTest):
                 'rx2dr'     : rx2dr,
                 'devnonce'  : devnonce,
                 }
+        print('Device session: DevEUI=%s DevAddr=%08X/%d' % (m['DevEUI'], devaddr & 0xFFFFFFFF, devaddr))
+        self.sim.filterTraffic(m['DevEUI'], devaddr)
 
         if self.sm:
             self.sm.add(self.session)
+
+        m['upmsg'] = msg
+        return m
 
     def verify(self, msg:LoraMsg,
             port:Optional[int]=None, explain:Optional[str]=None) -> lm.Msg:
@@ -603,23 +696,81 @@ class LoRaWANTest(DeviceTest):
             self.session['fcntdn'] += (1 + fcntdn_adj)
         self.dl_pdu(upmsg, pdu, **kwargs)
 
+
+    def mdl(self, upmsg:LoraMsg, port:Optional[int]=None,
+            payload:Optional[bytes]=None,
+            fctrl:int=0, fopts:Optional[bytes]=None,
+            confirmed:bool=False,
+            invalidmic:bool=False, fcntdn_adj:int=0, **kwargs:Any) -> None:
+        pdu = lm.pack_dataframe(
+                mhdr=(lm.FrmType.DCDN if confirmed
+                    else lm.FrmType.DADN)|lm.Major.V1,
+                devaddr=self.session['mgrpaddr'],
+                fcnt=self.session['mfcntdn'] + fcntdn_adj,
+                fctrl=fctrl,
+                fopts=fopts,
+                port=port,
+                payload=payload,
+                nwkskey=self.session['mnwkskey'],
+                appskey=self.session['mappskey'])
+        if invalidmic:
+            pdu = pdu[:-4] + bytes(map(lambda x: ~x & 0xff, pdu[-4:]))
+        if fcntdn_adj >= 0:
+            self.session['mfcntdn'] += (1 + fcntdn_adj)
+        self.dl_pdu(upmsg, pdu, **kwargs)
+
     # get the next uplink, process as join request (with kwargs)
-    async def lw_join(self, timeout:Optional[float]=None, **kwargs:Any) -> None:
+    async def lw_join(self, timeout:Optional[float]=None, **kwargs:Any) -> lm.Msg:
         msg = await self.upmsg(timeout)
-        self.process_join(msg, **kwargs)
+        return self.process_join(msg, **kwargs)
 
     # get the next uplink, verify (with kwargs), and return message
-    async def lw_uplink(self, timeout:Optional[float]=None, **kwargs:Any) -> lm.Msg:
-        msg = await self.upmsg(timeout)
-        m = self.verify(msg, **kwargs)
-        m['upmsg'] = msg
-        return m
+    async def lw_uplink(self, timeout:Optional[float]=None,
+            filter:Callable[[lm.Msg],bool]=lambda m: True, limit:int=1,
+            explain:Optional[str]=None, **kwargs:Any) -> lm.Msg:
+        deadline = timeout and asyncio.get_event_loop().time() + timeout
+        for _ in range(limit):
+            timeout = deadline and max(0, deadline - asyncio.get_event_loop().time())
+            msg = await self.upmsg(timeout)
+            m = self.verify(msg, explain=explain, **kwargs)
+            m['upmsg'] = msg
+            if filter(m):
+                return m
+        assert False, DeviceTest.explain_more(
+                f'No matching message received within limit of {limit} messages',
+                explain=explain)
+
+    # consume uplinks until matching a port/condition met - limited by msgs/timeout
+    # raise EOFError/TimeoutError if no match
+    async def lw_uplink_until(self, port:int=None,
+                              condfn:CondFn=None,
+                              maxmsgs:int=0,
+                              timeout:Optional[float]=None,
+                              **kwargs:Any) -> Optional[lm.Msg]:
+        deadline = asyncio.get_event_loop().time() + (timeout or 1e13)
+        maxmsgs = maxmsgs or 1000
+        while maxmsgs > 0:
+            maxmsgs -= 1
+            m = await self.lw_uplink(deadline-asyncio.get_event_loop().time())
+            if ((port is None or m['FPort'] == port) and
+                (condfn is None or condfn(m))):
+                return m
+        raise EOFError()
+
+    def lw_uplink_prune(self) -> None:
+        while not self.upmsgs.empty():
+            self.upmsgs.get_nowait()
 
     # enqueue a downlink (with kwargs)
     def lw_dnlink(self, m:Union[LoraMsg,lm.Msg], **kwargs:Any) -> None:
         if not isinstance(m, LoraMsg):
             m = cast(LoraMsg, m['upmsg'])
         self.dl(m, **kwargs)
+
+    def lw_mdnlink(self, m:Union[LoraMsg,lm.Msg], **kwargs:Any) -> None:
+        if not isinstance(m, LoraMsg):
+            m = cast(LoraMsg, m['upmsg'])
+        self.mdl(m, **kwargs)
 
     @staticmethod
     def get_opts(m:lm.Msg) -> List[lo.Opt]:
@@ -678,6 +829,8 @@ class LoRaWANTest(DeviceTest):
                 help='Set region')
         p.add_argument('-s', '--tests', type=tests, default=None,
                 help='Specify tests to run')
+        p.add_argument('-S', '--skip-tests', type=tests, default=None,
+                help='Specify tests to skip')
         p.add_argument('-v', '--virtual-time', action='store_true',
                 help='Use virtual time')
         p.add_argument('-q', '--quit-on-fail', action='store_true',
@@ -690,3 +843,14 @@ class LoRaWANTest(DeviceTest):
                     help='Show message traffic')
             p.add_argument('hexfiles', metavar='HEXFILE', nargs='+',
                     help='Firmware files to load')
+
+        p.add_argument('--dns', type=str, metavar='hostname[:port]',
+                       help='Enable hardware based tests. BasicStation connects to this hostname.')
+        p.add_argument('--tty', type=str, metavar='TTYDEV',
+                       help='The modem device is attached to this TTY device. Default: %(default)s',
+                       default='/dev/ttyUSB0')
+        p.add_argument('--ocdargs', type=str, metavar='"arg1 arg2 .."',
+                       help='Extra arguments to add to openocd call when reseting device. . Default: %(default)s',
+                       default='-f ../../tools/openocd/nucleo-l0.cfg -f ../../tools/openocd/flash.cfg')
+        p.add_argument('--station', type=str, metavar='"arg1 arg2 .."',
+                       help='Start station process before start of first test.')

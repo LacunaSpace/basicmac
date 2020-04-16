@@ -12,6 +12,7 @@ enum {
     FLAG_MODESWITCH	= (1 << 0),	// mode switch pending
     FLAG_BUSY		= (1 << 1),	// radio is busy
     FLAG_JOINING	= (1 << 2),	// trying to join
+    FLAG_SHUTDOWN 	= (1 << 3),	// shutdown reqested
 };
 
 static struct {
@@ -28,6 +29,9 @@ static struct {
 
     struct {
         bool use_profile;       // Use ADR profile instead of network-managed
+        bool changed;           // ADR profile settings have changes not yet applied
+        s1_t txPowAdj;          // un-managed txPowAdj
+        s1_t managedTxPowAdj;   // previous txPowAdj when network-managed
         uint8_t dr[32];         // datarates to use
     } adrp;
 
@@ -91,7 +95,7 @@ again:
         LMIC_track(state.bcn.nextrx);
     } else {
         LMIC_scan(state.bcn.interval + state.bcn.off_slots);
-        debug_printf("scanning %.1F MHz...\r\n", LMIC.freq, 6);
+        debug_printf("lwm: scanning %.1F MHz...\r\n", LMIC.freq, 6);
     }
 }
 
@@ -165,21 +169,19 @@ void lwm_slotparams (u4_t freq, dr_t dr, ostime_t interval, int slotsz, int miss
 // ------------------------------------------------
 // TX opportunity
 
-// TODO: this should be provided by the region definition
-static int max_plen (dr_t dr) {
-#if defined(CFG_eu868)
-    if( LMIC.region->regcode == REGCODE_EU868 && dr < 4 ) {
-        static const uint8_t MAX_PLEN[4] = { 51, 51, 51, 115 };
-        return MAX_PLEN[dr];
+static void update_adr (void) {
+    if( state.adrp.changed ) {
+        if( LMIC.adrEnabled ) {
+            state.adrp.managedTxPowAdj = LMIC.txPowAdj;
+        }
+        LMIC_setAdrMode(!state.adrp.use_profile);
+        LMIC.txPowAdj = state.adrp.use_profile ? state.adrp.txPowAdj
+            : state.adrp.managedTxPowAdj;
+        state.adrp.changed = false;
     }
-#endif
-#if defined(CFG_us915)
-    if( LMIC.region->regcode == REGCODE_US915 && dr < 3 ) {
-        static const uint8_t MAX_PLEN[3] = { 11, 53, 125 };
-        return MAX_PLEN[dr];
+    if( state.adrp.use_profile ) {
+        LMIC_setDrTxpow(state.adrp.dr[os_getRndU1() & 0x1f], KEEP_TXPOWADJ);
     }
-#endif
-    return 242;
 }
 
 static void tx_opportunity (osjob_t* j) {
@@ -188,17 +190,9 @@ static void tx_opportunity (osjob_t* j) {
     while ((job = state.queue) != NULL && job->prio >= state.runprio) {
         state.queue = job->next;
         lwm_txinfo txinfo;
-
-        if( state.adrp.use_profile ) {
-            LMIC_setAdrMode(0);
-            LMIC_setDrTxpow(state.adrp.dr[os_getRndU1() & 0x1f], KEEP_TXPOWADJ);
-        } else {
-            LMIC_setAdrMode(1);
-        }
-
         memset(&txinfo, 0, sizeof(txinfo));
         txinfo.data = LMIC.pendTxData;
-        txinfo.dlen = max_plen(LMIC.datarate);
+        txinfo.dlen = LMIC_maxAppPayload();
         if (job->txfunc(&txinfo)) {
             ASSERT((unsigned int) txinfo.dlen < MAX_LEN_PAYLOAD);
             if (txinfo.data != LMIC.pendTxData) {
@@ -207,9 +201,9 @@ static void tx_opportunity (osjob_t* j) {
             LMIC.pendTxConf = txinfo.confirmed;
             LMIC.pendTxPort = txinfo.port;
             LMIC.pendTxLen = txinfo.dlen;
-            LMIC_setTxData();
             state.flags |= FLAG_BUSY;
             state.completefunc = txinfo.txcomplete;
+            LMIC_setTxData();
             return;
         }
     }
@@ -221,19 +215,21 @@ static void tx_opportunity (osjob_t* j) {
 #endif
 }
 
-// Schedule TX opportunity right now
-static void tx_now (void) {
-    os_setCallback(&state.job, tx_opportunity);
+// Schedule next TX opportunity right now
+static void tx_next (osjob_t* j) {
+    os_setApproxTimedCallback(j, LMIC_nextTx(os_getTime()),
+            (LMIC.opmode & OP_NEXTCHNL) ? tx_next : tx_opportunity);
 }
 
 // TX complete handler
 static void tx_complete (void) {
     state.flags &= ~FLAG_BUSY;
+    update_adr();
     if (mode_switch()) {
         return;
     }
     if (state.mode == LWM_MODE_NORMAL) {
-        tx_now();
+        tx_next(&state.job);
     }
 #ifdef LWM_SLOTTED
     else if (state.mode == LWM_MODE_SLOTTED) {
@@ -256,7 +252,7 @@ static void join (osjob_t* job) {
 static void reschedule_join (void) {
     os_setApproxTimedCallback(&state.job,
             os_getTime() + (
-#if defined(CFG_eu868)
+#if defined(CFG_eu868) || defined(CFG_in865)
                 (state.jcnt < 10) ? sec2osticks(360) :	// first hour:    every 6 minutes
                 (state.jcnt < 20) ? sec2osticks(3600) :	// next 10 hours: every hour
                 sec2osticks(3600 * 12)			// after:         every 12 hours
@@ -264,20 +260,32 @@ static void reschedule_join (void) {
                 (state.jcnt < 6) ? sec2osticks(600) :	// first hour:    every 10 minutes
                 (state.jcnt < 12) ? sec2osticks(6000) :	// next 10 hours: every 100 minutes
                 sec2osticks(3600 * 12)			// after:         every 12 hours
+#else
+#warning "Unsupported region"
+                sec2osticks(3600)
 #endif
                 ), join);
 }
 
-// Note: only call this function when idle and
-// when no tx_opportunity is scheduled!!
+static void do_shutdown (void) {
+    LMIC_shutdown();
+    os_clearCallback(&state.job); // cancel any pending backed-off join or tx opportunity
+    state.flags &= ~(FLAG_SHUTDOWN | FLAG_JOINING | FLAG_BUSY);
+    state.mode = LWM_MODE_SHUTDOWN;
+}
+
+// Note: only call this function when idle
 static bool mode_switch (void) {
     ASSERT(!(state.flags & FLAG_BUSY));
     if (state.flags & FLAG_MODESWITCH) {
-        debug_printf("switching mode: ");
+        if( (state.flags & FLAG_SHUTDOWN) && state.nextmode != LWM_MODE_SHUTDOWN ) {
+            debug_printf("lwm: forcing shutdown\r\n");
+            do_shutdown();
+        }
+        debug_printf("lwm: switching mode - ");
         if (state.nextmode == LWM_MODE_SHUTDOWN) {
             debug_printf("shutdown\r\n");
-            state.flags &= ~FLAG_JOINING;
-            LMIC_shutdown();
+            do_shutdown();
         } else {
             if (state.mode == LWM_MODE_SHUTDOWN) {
                 state.flags |= FLAG_JOINING;
@@ -287,7 +295,7 @@ static bool mode_switch (void) {
             if (state.nextmode == LWM_MODE_NORMAL) {
                 debug_printf("normal\r\n");
                 if (!(state.flags & (FLAG_BUSY | FLAG_JOINING))) {
-                    tx_now();
+                    tx_next(&state.job);
                 }
             }
 #ifdef LWM_SLOTTED
@@ -313,15 +321,16 @@ static bool mode_switch (void) {
 // ------------------------------------------------
 // Public API
 
-void lwm_clear_send (lwm_job* job) {
+bool lwm_clear_send (lwm_job* job) {
     lwm_job** pnext = &state.queue;
     while (*pnext) {
         if (*pnext == job) {
             *pnext = job->next;
-            break;
+            return true;
         }
         pnext = &((*pnext)->next);
     }
+    return false;
 }
 
 void lwm_request_send (lwm_job* job, unsigned int priority, lwm_tx txfunc) {
@@ -342,32 +351,48 @@ void lwm_request_send (lwm_job* job, unsigned int priority, lwm_tx txfunc) {
 
     if (state.mode != LWM_MODE_SHUTDOWN
             && !(state.flags & (FLAG_BUSY | FLAG_JOINING))) {
-        tx_now();
+        tx_next(&state.job);
     }
+}
+
+int lwm_getmode () {
+    return state.mode;
 }
 
 void lwm_setmode (int mode) {
     state.nextmode = mode;
     if (state.nextmode != state.mode) {
+        if( mode == LWM_MODE_SHUTDOWN ) {
+            if( (state.flags & (FLAG_BUSY | FLAG_JOINING)) == (FLAG_BUSY | FLAG_JOINING) ) {
+                // abort immediately
+                debug_printf("lwm: aborting join - shutdown\r\n");
+                do_shutdown();
+                state.flags &= ~FLAG_MODESWITCH;
+                return;
+            }
+            state.flags |= FLAG_SHUTDOWN; // remember we were supposed to shutdown
+        }
         state.flags |= FLAG_MODESWITCH;
         if (!(state.flags & FLAG_BUSY)) {
             os_clearCallback(&state.job);
             mode_switch();
         }
-    } else {
+    } else if ( (state.flags & FLAG_SHUTDOWN) == 0 ) {
         state.flags &= ~FLAG_MODESWITCH;
     }
 }
 
-void lwm_setpriority (unsigned int priority) {
+unsigned int lwm_setpriority (unsigned int priority) {
+    unsigned int runprio_prev = state.runprio;
     state.runprio = priority;
     if (state.mode != LWM_MODE_SHUTDOWN
             && !(state.flags & (FLAG_BUSY | FLAG_JOINING))) {
-        tx_now();
+        tx_next(&state.job);
     }
+    return runprio_prev;
 }
 
-void lwm_setadrprofile (const unsigned char* drlist, int n) {
+void lwm_setadrprofile (int txPowAdj, const unsigned char* drlist, int n) {
     if( drlist == NULL ) {
         state.adrp.use_profile = false;
     } else {
@@ -379,7 +404,13 @@ void lwm_setadrprofile (const unsigned char* drlist, int n) {
             }
             state.adrp.dr[i] = drlist[j] & 0xf;
         }
+        state.adrp.txPowAdj = txPowAdj;
         state.adrp.use_profile = true;
+    }
+    state.adrp.changed = true;
+    if(state.mode != LWM_MODE_SHUTDOWN
+            && !(state.flags & (FLAG_BUSY | FLAG_JOINING)) ) {
+        update_adr();
     }
 }
 
@@ -402,7 +433,7 @@ DECL_ON_LMIC_EVENT {
     if (e == EV_TXCOMPLETE || e == EV_RXCOMPLETE) {
         if ((LMIC.txrxFlags & TXRX_PORT) && LMIC.frame[LMIC.dataBeg-1]) {
             SVCHOOK_lwm_downlink(LMIC.frame[LMIC.dataBeg-1],
-                    LMIC.frame+LMIC.dataBeg, LMIC.dataLen, LMIC.txrxFlags);
+				 LMIC.frame + LMIC.dataBeg, LMIC.dataLen, LMIC.txrxFlags & LWM_FLAG_MASK);
         }
     }
 
@@ -411,9 +442,12 @@ DECL_ON_LMIC_EVENT {
             LMIC_shutdown(); // stop joining
             state.jcnt += 1;
             state.flags &= ~FLAG_BUSY;
-            reschedule_join();
+            if( !mode_switch() ) {
+                reschedule_join();
+            }
             break;
         case EV_JOINED:
+            LMIC.polltimeout = sec2osticks(5); // give us a chance to piggyback
             state.flags &= ~FLAG_JOINING;
             // fall-thru
         case EV_TXCOMPLETE:

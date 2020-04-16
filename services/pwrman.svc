@@ -1,0 +1,16 @@
+# Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
+#
+# This file is subject to the terms and conditions defined in file 'LICENSE',
+# which is part of this source code package.
+
+
+src:
+    - pwrman/pwrman.c
+
+require:
+    - eefs
+
+hook.eefs_init: _pwrman_init
+hook.eefs_fn:   _pwrman_eefs_fn
+
+# vim: syntax=yaml

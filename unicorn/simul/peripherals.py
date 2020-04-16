@@ -60,6 +60,9 @@ class GPIO:
         self.val  = 0  # calculated value
         self.irq  = 0  # pending irq
 
+        self.epup = 0  # external pull-up
+        self.epdn = 0  # external pull-down
+
         self.ic.clear(self.line)
 
     def read_irq(self) -> int:
@@ -93,6 +96,17 @@ class GPIO:
             self.inpm |= mask
         self.update()
 
+    def extconfig(self, pio:int, epup:bool=False, epdn:bool=False) -> None:
+        mask = (1 << pio)
+        if epup:
+            self.epup |= mask
+        else:
+            self.epup &= ~mask
+        if epdn:
+            self.epdn |= mask
+        else:
+            self.epdn &= ~mask
+
     async def waitfor(self, line:int, lvl:bool) -> None:
         mask = 1 << line
         if (not not (self.val & mask)) != lvl:
@@ -109,8 +123,8 @@ class GPIO:
         pval = self.val
         self.val = ((self.cfg1 & self.cfg2)
                 | ((~self.cfg1 & self.cfg2)
-                    & ((self.inpm & self.inpv) | (~self.inpm & self.pup) |
-                        ((~self.inpm & ~self.pup & ~self.pdn) & random.getrandbits(32)))))
+                    & ((self.inpm & self.inpv) | (~self.inpm & (self.pup | self.epup)) |
+                        ((~self.inpm & ~self.pdn & ~self.epdn) & random.getrandbits(32)))))
         cval = pval ^ self.val
         if cval:
             self.irq |= ((self.rise & cval & self.val)

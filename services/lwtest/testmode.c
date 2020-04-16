@@ -27,11 +27,12 @@
 
 static struct {
     uint8_t active;    // test mode active
-    uint8_t join;      // trigger join request
     uint8_t confirmed; // request confirmation for uplinks
+    uint16_t retrans;  // confirmed frame retransmission counter
     uint16_t dncnt;    // downlink counter (to be echoed)
-    uint16_t upcnt;    // number of up messages w/o downlink (max 192)
+    uint16_t upcnt;    // number of uplinks w/o downlink (max 192)
     uint32_t uptotal;  // total number of up messages since start of test mode
+    uint32_t lastdf;   // last down fcnt
     ostime_t dntime;   // time of last downlink (max 30 minutes)
     osjob_t timer;     // cw timeout or uplink timer
     lwm_job lwmjob;    // uplink job
@@ -39,15 +40,20 @@ static struct {
 
 static void starttestmode (void) {
     debug_printf("TEST MODE START\r\n");
-    testmode.uptotal = 0;
     testmode.active = 1;
+    testmode.uptotal = 0;
+    testmode.dncnt = 0;
+    testmode.retrans = 0;
+    testmode.lastdf = 0;
     // disable duty cycle
     LMIC_enableFastJoin();
     LMIC_disableDC();
+    // disable ADR profiles
+    lwm_setadrprofile(0, NULL, 0);
     // don't send MAC options immediately in empty frame, wait for next uplink
     LMIC.polltimeout = sec2osticks(30);
     // disable application messages
-    lwm_setpriority(LWM_PRIO_MAX);
+    lwm_setpriority(LWM_PRIO_MAX - 2);
 }
 
 static void stoptestmode (void) {
@@ -67,44 +73,39 @@ static void stoptestmode (void) {
 }
 
 static bool txfunc (lwm_txinfo* txi) {
-    // decrement sequence counter for exact frame repetition if last confirmed up frame has not been ack'ed
-    if (testmode.confirmed && LMIC.txrxFlags & TXRX_NACK) {
+    if (testmode.confirmed && (LMIC.txrxFlags & TXRX_NACK) && testmode.retrans < 8) {
+	// no ACK received - retransmit last uplink data in LMIC.pendTxData with same seqnoUp
+	txi->dlen = LMIC.pendTxLen;
 	LMIC.seqnoUp -= 1;
-    }
-    txi->port = TESTMODE_PORT;
-    txi->confirmed = testmode.confirmed;
-    if (LMIC.frame[LMIC.dataBeg] == TESTCMD_ECHO) {
+	testmode.retrans += 1;
+    } else if (LMIC.frame[LMIC.dataBeg] == TESTCMD_ECHO) {
         txi->data[0] = TESTCMD_ECHO;
         for( int i = 1; i < LMIC.dataLen; i++ ) {
             txi->data[i] = LMIC.frame[LMIC.dataBeg + i] + 1;
         }
 	txi->dlen = LMIC.dataLen;
+	testmode.retrans = 0;
     } else {
 	txi->data[0] = testmode.dncnt >> 8; // fill in downlink_counter
 	txi->data[1] = testmode.dncnt;      // (2 bytes, big endian)
 	txi->dlen = 2;
+	testmode.retrans = 0;
     }
+    txi->port = TESTMODE_PORT;
+    txi->confirmed = testmode.confirmed;
     LMIC_setAdrMode(1);
-    debug_printf("TESTMODE UPLINK #%d (%sconfirmed, len=%d): %h\r\n",
-		 testmode.uptotal++, (testmode.confirmed) ? "" : "un", txi->dlen, txi->data, txi->dlen);
+    debug_printf("TESTMODE UPLINK #%d (%sconfirmed, seq=%d, len=%d): %h\r\n",
+		 testmode.uptotal++, (testmode.confirmed) ? "" : "un", LMIC.seqnoUp, txi->dlen, txi->data, txi->dlen);
     return true;
 }
 
 static void uplink (osjob_t* job) {
-    if (testmode.join) {
-	testmode.join = 0;
-	stoptestmode(); // (activation command will be resent after join)
-        // XXX - use explicit rejoin
-	lwm_setmode(LWM_MODE_SHUTDOWN);
-	lwm_setmode(LWM_MODE_NORMAL);
-    } else {
-	lwm_request_send(&testmode.lwmjob, LWM_PRIO_MAX, txfunc);
-    }
+    lwm_request_send(&testmode.lwmjob, LWM_PRIO_MAX - 2, txfunc);
 }
 
 static void stopcw (osjob_t* job) {
     // stop continuous wave
-    os_radio(RADIO_RST);
+    os_radio(RADIO_STOP);
     // continue frame reporting...
     uplink(job);
 }
@@ -113,57 +114,60 @@ static void stopcw (osjob_t* job) {
 void testmode_handleEvent (ev_t ev) {
     switch (ev) {
 	case EV_TXCOMPLETE: {
-	    if (((LMIC.txrxFlags & TXRX_PORT) && LMIC.frame[LMIC.dataBeg - 1] == TESTMODE_PORT && LMIC.dataLen > 0) ||
-		((LMIC.txrxFlags & (TXRX_DNW1|TXRX_DNW2)) && (LMIC.txrxFlags & TXRX_PORT) == 0 && testmode.active)) {
+	    // check for downlink
+	    if (LMIC.txrxFlags & (TXRX_DNW1|TXRX_DNW2)) {
 		unsigned char *buf = LMIC.frame + LMIC.dataBeg;
+		int port = -1;
+		if (LMIC.txrxFlags & TXRX_PORT) {
+		    port = LMIC.frame[LMIC.dataBeg - 1];
+		}
 
-		debug_printf("TESTMODE DOWNLINK (%s%slen=%d): % h\r\n",
-			     (LMIC.txrxFlags & TXRX_ACK) ? "ACK, " : "",
-			     (LMIC.txrxFlags & TXRX_NACK) ? "NACK, " : "",
-			     LMIC.dataLen, buf, LMIC.dataLen);
+		// save timestamp of last downlink
+		testmode.dntime = os_getTime();
+
+		// reset uplink-without-downlink counter
+		testmode.upcnt = 0;
 
 		if (testmode.active) {
-		    // save timestamp of last server command
-		    testmode.dntime = os_getTime();
-
-		    // reset uplink counter
-		    testmode.upcnt = 0;
+		    debug_printf("TESTMODE DOWNLINK (seq=%d, port=%d, len=%d%s%s%s%s): %h\r\n",
+				 LMIC.seqnoDn, port, LMIC.dataLen,
+				 (LMIC.txrxFlags & TXRX_DNW1) ? ", RX1" : "",
+				 (LMIC.txrxFlags & TXRX_DNW2) ? ", RX2" : "",
+				 (LMIC.txrxFlags & TXRX_ACK) ? ", ACK" : "",
+				 (LMIC.txrxFlags & TXRX_NACK) ? ", NACK" : "",
+				 buf, LMIC.dataLen);
 
 		    // update downlink counter
-		    testmode.dncnt += 1;
+                    if( testmode.lastdf != LMIC.seqnoDn) {
+                        testmode.lastdf = LMIC.seqnoDn;
+                        testmode.dncnt += 1;
+                    }
 
-		    // dispatch test commands
-		    if (LMIC.dataLen > 0) {
+		    if (port == TESTMODE_PORT && LMIC.dataLen > 0) {
+
+			// dispatch test commands
 			switch (buf[0]) {
 
 			    case TESTCMD_STOP: // deactivate test mode
-				if (LMIC.dataLen == 1) {
-				    stoptestmode();
-				}
+				stoptestmode();
 				break;
 
 			    case TESTCMD_CONFIRMED: // activate confirmations
-				if (LMIC.dataLen == 1) {
-				    testmode.confirmed = 1;
-				}
+				testmode.confirmed = 1;
 				break;
 
 			    case TESTCMD_UNCONFIRMED: // deactivate confirmations
-				if (LMIC.dataLen == 1) {
-				    testmode.confirmed = 0;
-				}
+				testmode.confirmed = 0;
 				break;
 
 			    case TESTCMD_LINKCHECK: // XXX undocumented?!?
-				if (LMIC.dataLen == 1) {
-				    // XXX
-				}
+				// XXX
 				break;
 
 			    case TESTCMD_JOIN: // trigger join request
-				if (LMIC.dataLen == 1) {
-				    testmode.join = 1; // defer join since rm is considered still busy
-				}
+				stoptestmode(); // (activation command will be resent after join)
+				lwm_setmode(LWM_MODE_SHUTDOWN);
+				lwm_setmode(LWM_MODE_NORMAL);
 				break;
 
 			    case TESTCMD_ECHO: // modify and echo frame
@@ -185,14 +189,12 @@ void testmode_handleEvent (ev_t ev) {
 			}
 		    }
 		} else { // test mode not active
-		    if (LMIC.dataLen == 4 && os_rlsbf4(buf) == 0x01010101) { // activate test mode
-			// reset downlink counter
-			testmode.dncnt = 0;
-			// begin test mode
+		    if (port == TESTMODE_PORT && LMIC.dataLen == 4 && os_rlsbf4(buf) == 0x01010101) {
+			// activate test mode
 			starttestmode();
 		    }
 		}
-	    } else { // no downlink data or not a test command
+	    } else { // no downlink
 		if (testmode.active &&
 		    (++testmode.upcnt > TESTMODE_MAXCNT ||
 		     (os_getTime() - testmode.dntime) > sec2osticks(TESTMODE_TIMEOUT))) {
@@ -203,7 +205,7 @@ void testmode_handleEvent (ev_t ev) {
 	    }
 
 	    if (testmode.active) {
-		// schedule next uplink (or join request)
+		// schedule next uplink
 		os_setApproxTimedCallback(&testmode.timer, os_getTime() + sec2osticks(TESTMODE_INTERVAL), uplink);
 	    }
 	}

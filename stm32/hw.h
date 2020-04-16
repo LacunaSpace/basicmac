@@ -90,6 +90,8 @@ int gpio_transition (int port, int pin, int type, int duration, unsigned int con
 #define IRQ_PIN_SET(gpio, on)	gpio_set_extirq(BRD_PIN(gpio), (on))
 #define TXN_PIN(gpio, t, d, c)	gpio_transition(BRD_PORT(gpio), BRD_PIN(gpio), (t), (d), (c))
 
+#define SET_PIN_ONOFF(gpio, on) gpio_set_pin(BRD_PORT(gpio), BRD_PIN(gpio), (((gpio) & BRD_GPIO_ACTIVE_LOW) ? 1 : 0) ^ ((on) ? 1 : 0))
+
 // Convenience macros to set GPIO configuration registers
 #define GPIO_AF_BITS		4		// width of bit field
 #define GPIO_AF_MASK		0x0F		// mask in AFR[0/1]
@@ -181,12 +183,13 @@ int gpio_transition (int port, int pin, int type, int duration, unsigned int con
 // ADC
 //////////////////////////////////////////////////////////////////////
 
-#define VREFINT_CAL_ADDR ((u2_t*) (0x1FF80078U))
-#define TEMP130_CAL_ADDR ((uint16_t*) ((uint32_t) 0x1FF8007E))
-#define TEMP30_CAL_ADDR  ((uint16_t*) ((uint32_t) 0x1FF8007A))
-#define VREFINT_ADC_CH       17
-#define TEMPINT_ADC_CH       18
-u2_t adc_read (u1_t chnl);
+#define VREFINT_CAL_ADDR ((uint16_t*) (0x1FF80078U))
+#define TEMP130_CAL_ADDR ((uint16_t*) (0x1FF8007EU))
+#define TEMP30_CAL_ADDR  ((uint16_t*) (0x1FF8007AU))
+#define VREFINT_ADC_CH   17
+#define TEMPINT_ADC_CH   18
+
+#define PERIPH_ADC
 
 
 //////////////////////////////////////////////////////////////////////
@@ -206,20 +209,7 @@ u2_t adc_read (u1_t chnl);
 // I2C
 //////////////////////////////////////////////////////////////////////
 
-#ifdef BRD_I2C
-
-#define I2C_BUSY	1
-#define I2C_OK		0
-#define I2C_NAK		-1
-#define I2C_ABORT	-2
-typedef void (*i2c_cb) (int status);
-void i2c_xfer (unsigned int addr, unsigned char* buf, unsigned int wlen, unsigned int rlen, i2c_cb cb, ostime_t timeout);
-void i2c_xfer_ex (unsigned int addr, unsigned char* buf, unsigned int wlen, unsigned int rlen, ostime_t timeout,
-	osjob_t* job, osjobcb_t cb, int* pstatus);
-void i2c_irq (void);
-void i2c_abort (void);
-
-#endif
+#define PERIPH_I2C
 
 
 // ------------------------------------------------
@@ -254,16 +244,17 @@ u1_t spi_xfer (u1_t out);
 // FLASH
 //////////////////////////////////////////////////////////////////////
 
+#define PERIPH_FLASH
+
 #define FLASH_PAGE_SZ		128
 #define FLASH_PAGE_NW		(FLASH_PAGE_SZ >> 2)
 
-#define FLASH_SIZE      (*((unsigned short*)0x1FF8007C) << 10) // flash size register (RM0377 28.1.1)
-
-// NOTE: continue using static flash size for firmwares since old boot loaders cannot handle more than 128K
-// #define FLASH_END	((uint32_t*)(FLASH_BASE + FLASH_SIZE))
+#ifdef FLASH_END
 #undef FLASH_END         // already defined by some STM32L0XXXxx header files
-extern uint32_t _eflash; // provided by linker script
-#define FLASH_END	(&_eflash)
+#endif
+
+#define FLASH_SZ        (*((unsigned short*)0x1FF8007C) << 10) // flash size register (RM0377 28.1.1)
+#define FLASH_END       (FLASH_BASE + FLASH_SZ)
 
 typedef struct {
     uint32_t* base;

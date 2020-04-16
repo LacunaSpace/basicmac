@@ -1,6 +1,7 @@
-//  __ __   ___ __ __    _________________________________
-// (_ |_ |V| | |_ /  |_| (C) 2018-2018 Semtech Corporation
-// __)|__| | | |__\__| |               All rights reserved
+// Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
+//
+// This file is subject to the terms and conditions defined in file 'LICENSE',
+// which is part of this source code package.
 
 #ifndef _hal_unicorn_h_
 #define _hal_unicorn_h_
@@ -17,8 +18,10 @@ void pio_irq_config (unsigned int pin, bool rising, bool falling);
 void pd_init (void);
 bool pd_verify (void);
 
-#if defined(SVC_frag)
-// Glue for Fragmentation service
+#if defined(SVC_fuota)
+// Glue for FUOTA (fountain code) service
+
+#include "peripherals.h"
 
 #define fuota_flash_pagesz FLASH_PAGE_SZ
 #define fuota_flash_bitdefault 0

@@ -1,8 +1,3 @@
-/*  __ __   ___ __ __    _________________________________
-   (_ |_ |V| | |_ /  |_| (C) 2017-2018 Semtech Corporation
-   __)|__| | | |__\__| |               All rights reserved
-*/
-
 SECTIONS {
     .text : {
 	. = ALIGN(4);
@@ -45,4 +40,9 @@ SECTIONS {
 	. = ALIGN(128);
 	__fw_end__ = .;
     } >FWFLASH
+
+    /DISCARD/ : {
+	*(.ARM)
+	*(.ARM*)
+    }
 }

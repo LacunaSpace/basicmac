@@ -5,5 +5,7 @@ require:
     - appstart
     - lwmux
     - lwtest
+    - frag
+    - fwman
 
 # vim: syntax=yaml

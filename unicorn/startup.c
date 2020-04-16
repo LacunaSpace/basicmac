@@ -1,6 +1,7 @@
-//  __ __   ___ __ __    _________________________________
-// (_ |_ |V| | |_ /  |_| (C) 2017-2018 Semtech Corporation
-// __)|__| | | |__\__| |               All rights reserved
+// Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
+//
+// This file is subject to the terms and conditions defined in file 'LICENSE',
+// which is part of this source code package.
 
 #include "lmic.h"
 

@@ -1,6 +1,7 @@
-//  __ __   ___ __ __    _________________________________
-// (_ |_ |V| | |_ /  |_| (C) 2018-2018 Semtech Corporation
-// __)|__| | | |__\__| |               All rights reserved
+// Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
+//
+// This file is subject to the terms and conditions defined in file 'LICENSE',
+// which is part of this source code package.
 
 #include "lmic.h"
 #include "peripherals.h"
@@ -27,7 +28,22 @@ enum {
     SVC_IRQ,
     SVC_PIO,
     SVC_UART,
+    SVC_RESET,
+    SVC_RX_ON,   // continuous RX
+    SVC_RX_CAD,  // channel activity detection
+    SVC_LOG_EV,
 };
+
+typedef struct {
+    int32_t xbeg;
+    int32_t xend;
+    uint32_t freq;
+    uint32_t rps;
+    int32_t pow; // txpow or rssi
+    int32_t snr;
+    uint32_t dlen;
+    unsigned char data[256];
+} sim_rxtx;
 
 static struct {
     osjob_t rjob; // radio job
@@ -35,6 +51,7 @@ static struct {
     boot_boottab* boottab;
     unsigned int irqlevel;
     osxtime_t xnow_cached;
+    sim_rxtx tx;
 } sim;
 
 static uint32_t irqvector[]; // fwd decl
@@ -56,28 +73,31 @@ static void svc (uint32_t id, uint32_t p1, uint32_t p2, uint32_t p3) {
 
 void hal_init (void* bootarg) {
     sim.boottab = bootarg;
+    ASSERT(sim.boottab->version >= 0x105); // require bootloader v261
+
     sim.xnow_cached = -1;
     sim.rand = svc32(SVC_RNG_SEED, 0, 0, 0);
 
     svc(SVC_VTOR, (uint32_t) irqvector, 0, 0);
 
-    pd_init();
-
-#if defined(SVC_eefs)
-    eefs_init((void*) APPDATA_BASE, APPDATA_SZ);
+#if CFG_DEBUG != 0
+    debug_str("\r\n============== DEBUG STARTED ==============\r\n");
 #endif
+
+    pd_init();
 
 #if defined(SVC_frag)
     {
         extern volatile boot_fwhdr fwhdr;
-        frag_init((void*) (((uintptr_t) &fwhdr + fwhdr.size
-                        + (FLASH_PAGE_SZ - 1)) & ~(FLASH_PAGE_SZ - 1)),
-                (void*) FLASH_END);
+        void* beg[1] = { (void*) (((uintptr_t) &fwhdr + fwhdr.size
+                    + (FLASH_PAGE_SZ - 1)) & ~(FLASH_PAGE_SZ - 1)) };
+        void* end[1] = { (void*) FLASH_END };
+        _frag_init(1, beg, end);
     }
 #endif
 
-#if CFG_DEBUG != 0
-    debug_str("\r\n============== DEBUG STARTED ==============\r\n");
+#if defined(SVC_eefs)
+    eefs_init((void*) APPDATA_BASE, APPDATA_SZ);
 #endif
 }
 
@@ -85,7 +105,7 @@ void hal_watchcount (int cnt) {
 }
 
 #if 0
-void hal_pin_rxtx (s1_t val) {
+void hal_ant_switch (u1_t val) {
 }
 
 void hal_pin_rst (u1_t val) {
@@ -137,6 +157,8 @@ s2_t hal_subticks (void) {
 }
 
 void hal_waitUntil (u4_t time) {
+    // be very strict about how long we can busy wait
+    ASSERT(((s4_t) time - (s4_t) hal_ticks()) < ms2osticks(100));
     while (1) {
         u4_t now = hal_ticks();
         if (((s4_t) (time - now)) <= 0) {
@@ -174,20 +196,9 @@ void hal_failed (void) {
     // not reached
 }
 
-void radio_init (void) {
+void radio_init (bool calibrate) {
 
 }
-
-typedef struct {
-    int32_t xbeg;
-    int32_t xend;
-    uint32_t freq;
-    uint32_t rps;
-    int32_t pow; // txpow or rssi
-    int32_t snr;
-    uint32_t dlen;
-    unsigned char data[256];
-} sim_rxtx;
 
 static ostime_t syms2ticks (rps_t rps, int n) {
     if( getSf(rps) == FSK ) {
@@ -204,31 +215,28 @@ static ostime_t syms2ticks (rps_t rps, int n) {
 
 static void txdone (osjob_t* osjob) {
 #if 0
-    LOGIT(2, "txdone: pctx xbeg=%ldus/0x%X xend=%ldus/0x%X now=%ld/0x%X\n",
-	  ticks2time(pctx->txframe.xbeg), pctx->txframe.xbeg,
-	  ticks2time(pctx->txframe.xend), pctx->txframe.xend, enow, now);
+    debug_printf("txdone: pctx xbeg=%ldus/0x%X xend=%ldus/0x%X now=%ld/0x%X\n",
+                 ticks2time(pctx->txframe.xbeg), pctx->txframe.xbeg,
+                 ticks2time(pctx->txframe.xend), pctx->txframe.xend, enow, now);
     pctx->txfunc(pctx, pctx->txframe.frame, pctx->txframe.flen, pctx->txframe.freq, pctx->txframe.rps,
 		 ticks2time(pctx->txframe.xbeg), ticks2time(pctx->txframe.xend));
 #endif
+    svc(SVC_TX, (uint32_t) &sim.tx, 0, 0);
     os_setTimedCallback(&LMIC.osjob, LMIC.txend + us2osticks(43), LMIC.osjob.func);
 }
 
 static void tx (void) {
-    sim_rxtx tx;
-
     ostime_t now = hal_ticks();
 
-    tx.xbeg = now;
-    tx.xend = now + calcAirTime(LMIC.rps, LMIC.dataLen);
-    tx.freq = LMIC.freq;
-    tx.rps = LMIC.rps;
-    tx.pow = LMIC.txpow + LMIC.txPowAdj;
-    tx.dlen = LMIC.dataLen;
-    memcpy(tx.data, LMIC.frame, LMIC.dataLen);
+    sim.tx.xbeg = now;
+    sim.tx.xend = now + calcAirTime(LMIC.rps, LMIC.dataLen);
+    sim.tx.freq = LMIC.freq;
+    sim.tx.rps = LMIC.rps;
+    sim.tx.pow = LMIC.txpow + LMIC.brdTxPowOff;
+    sim.tx.dlen = LMIC.dataLen;
+    memcpy(sim.tx.data, LMIC.frame, LMIC.dataLen);
 
-    svc(SVC_TX, (uint32_t) &tx, 0, 0);
-
-    LMIC.txend = tx.xend;
+    LMIC.txend = sim.tx.xend;
     os_setTimedCallback(&sim.rjob, LMIC.txend, txdone);
 }
 
@@ -249,29 +257,80 @@ static void rxdone (osjob_t* job) {
 }
 
 static void rxdo (osjob_t* job) {
-    if (svc32(SVC_RX_DO, 0, 0, 0) == 0) {
+    ostime_t rxend = svc32(SVC_RX_DO, 0, 0, 0);
+    if (rxend == 0) {
         // no preamble in sight
         rxdone(job);
     } else {
         // there's a chance we might get something
-        os_setTimedCallback(&sim.rjob, LMIC.txend, rxdone);
+        os_setTimedCallback(&sim.rjob, rxend, rxdone);
+        os_clearCallback(&LMIC.osjob);   // this might timeout although we're about to get some frame
     }
 }
 
 static void rx (void) {
     hal_waitUntil(LMIC.rxtime); // busy wait until exact rx time
-#if 0
-    debug_printf("RX[freq=%.3F,sf=%d,bw=%s]\r\n",
-            LMIC.freq, 6, getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)));
-#endif
     ostime_t timeout = syms2ticks(LMIC.rps, LMIC.rxsyms);
     svc(SVC_RX_START, LMIC.freq, LMIC.rps, timeout);
     os_setTimedCallback(&sim.rjob, LMIC.rxtime + timeout, rxdo);
 }
 
+static void rxon (osjob_t* simjob) {
+    ostime_t timeout = ms2osticks(100);
+    ostime_t next = svc32(SVC_RX_ON, LMIC.freq, LMIC.rps, timeout);
+    if( !next ) {
+        os_setTimedCallback(&sim.rjob, os_getTime() + timeout/2, rxon);
+    } else {
+        svc(SVC_RX_START, LMIC.freq, LMIC.rps, next - os_getTime());
+        os_setTimedCallback(&sim.rjob, next, rxdo);
+    }
+}
+
+// fwd decls
+static void cad_nothing ();
+
+static void cad_rxdone (osjob_t* job) {
+    rxdone(job);
+    os_setCallback(&LMIC.osjob, LMIC.osjob.func);
+}
+
+static void cad_rxdo (osjob_t* simjob) {
+    if (svc32(SVC_RX_DO, 0, 0, 0) == 0) {
+        // no preamble in sight
+        cad_nothing();
+    } else {
+        // there's a chance we might get something
+        os_setTimedCallback(&sim.rjob, LMIC.txend, cad_rxdone);
+    }
+}
+
+static void cad_nothing () {
+    LMIC.dataLen = 0;
+    os_setCallback(&LMIC.osjob, LMIC.osjob.func);
+}
+
+static void cad_scan (osjob_t* simjob) {
+    int activity = svc32(SVC_RX_CAD, LMIC.freq, LMIC.rps, /*symbols*/1);
+    if( !activity ) {
+        cad_nothing();
+    } else {
+        ostime_t timeout = syms2ticks(LMIC.rps, 4);
+        os_setTimedCallback(&sim.rjob, os_getTime() + timeout, cad_rxdo);
+        svc(SVC_RX_START, LMIC.freq, LMIC.rps, timeout);
+    }
+}
+
 void os_radio (u1_t mode) {
+#if 0
+    if( mode == RADIO_RX || mode == RADIO_RXON ) {
+        debug_printf("%s[freq=%.3F,sf=%d,bw=%s]\r\n",
+                     mode == RADIO_RX ? "RX" : "RXON",
+                     LMIC.freq, 6, getSf(LMIC.rps) + 6,
+                     ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)));
+    }
+#endif
     switch (mode) {
-	case RADIO_RST:
+	case RADIO_STOP:
             os_clearCallback(&sim.rjob);
             break;
 	case RADIO_TX:
@@ -287,7 +346,22 @@ void os_radio (u1_t mode) {
             break;
 
 	case RADIO_RXON:
-            // not yet implemented
+            rxon(&sim.rjob);
+            break;
+
+	case RADIO_INIT:
+            break;
+
+	case RADIO_CAD:
+            // Turn on CAD and optionally RX a frame
+            //  - if no activity or RX frame failed set LMIC.dataLen = 0
+            //  - if activity detected start RX of a frame
+            //    and if RX of frame ok then set LMIC.dataLen to frame length
+            // Params:
+            //   LMIC.freq    - frequency
+            //   LMIC.rps     - radio parameters
+            cad_scan(&sim.rjob);
+            break;
 
         default:
             hal_failed();
@@ -313,7 +387,7 @@ void hal_stats_consume (hal_statistics* stats) {
 #ifdef CFG_DEBUG
 
 void hal_debug_str (const char* str) {
-    svc(SVC_DEBUG_STR, (uint32_t) str, 0, 0);
+    svc(SVC_DEBUG_STR, (uint32_t) str, strlen(str), 0);
 }
 
 void hal_debug_led (int val) {
@@ -557,7 +631,8 @@ static uint32_t irqvector[16] = {
 };
 
 void hal_reboot (void) {
-    // TODO: implement
+    svc(SVC_RESET, 0, 0, 0);
+    // not reached
     hal_failed();
 }
 
@@ -573,4 +648,16 @@ u4_t hal_dnonce_next (void) {
 void hal_dnonce_clear (void) {
     pdata* p = (pdata*) STACKDATA_BASE;
     p->dnonce = 0;
+}
+
+bool hal_set_update (void* ptr) {
+    return sim.boottab->update(ptr, NULL) == BOOT_OK;
+}
+
+void flash_write (void* dst, const void* src, unsigned int nwords, bool erase) {
+    sim.boottab->wr_flash(dst, src, nwords, erase);
+}
+
+void hal_logEv (uint8_t evcat, uint8_t evid, uint32_t evparam) {
+    svc32(SVC_LOG_EV, evcat, evid, evparam);
 }

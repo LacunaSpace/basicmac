@@ -34,7 +34,7 @@ typedef struct {
     s1_t        txpow;
 } band_t;
 
-#define MAX_BANDS       4
+#define MAX_BANDS       8
 #define BAND_MASK       (MAX_BANDS-1)
 #if (MAX_BANDS & BAND_MASK) != 0
 #error "MAX_BANDS must be a power of 2"
@@ -63,6 +63,9 @@ enum {
 #endif
 #ifdef CFG_cn470
     REGION_CN470,
+#endif
+#ifdef CFG_in865
+    REGION_IN865,
 #endif
     REGIONS_COUNT
 };
@@ -112,6 +115,7 @@ typedef struct {
             freq_t      baseFreqDn;                     // base frequency downlink channels
             u1_t        numChBlocks;                    // number of 8-channel blocks
             u1_t        numChDnBlocks;                  // number of 8-channel blocks for downlink
+            dr_t        joinDr;                         // join channel data rate
             dr_t        fixDr;                          // fixed-DR channel data rate
         };
     };
@@ -130,8 +134,8 @@ typedef struct {
     ostime_t            beaconAirtime;          // beacon air time
     eirp_t              maxEirp;                // max. EIRP (initial value)
     u1_t                rx1DrOff[8];            // RX1 data rate offsets
+    u1_t                dr2maxAppPload[16];     // max application payload (assuming no repeater and no fopts)
     u1_t                regcode;                // external region code
-    // TODO: max frame lengths
 
 } region_t;
 
@@ -199,7 +203,7 @@ typedef struct {
 
 
 // purpose of receive window - lmic_t.rxState
-enum { RADIO_RST=0, RADIO_TX=1, RADIO_RX=2, RADIO_RXON=3, RADIO_TXCW, RADIO_CCA };
+enum { RADIO_STOP=0, RADIO_TX=1, RADIO_RX=2, RADIO_RXON=3, RADIO_TXCW, RADIO_CCA, RADIO_INIT, RADIO_CAD, RADIO_TXCONT };
 // Netid values /  lmic_t.netid
 enum { NETID_NONE=(int)~0U, NETID_MASK=(int)0xFFFFFF };
 // MAC operation modes (lmic_t.opmode).
@@ -229,6 +233,7 @@ enum { TXRX_ACK    = 0x80,   // confirmed UP frame was acked
        TXRX_DNW1   = 0x01,   // received in 1st DN slot
        TXRX_DNW2   = 0x02,   // received in 2dn DN slot
        TXRX_PING   = 0x04,   // received in a scheduled RX slot
+       TXRX_NOTX   = 0x08,   // set if frame could not be sent as requested
 };
 // Event types for event callback
 enum _ev_t { EV_SCAN_TIMEOUT=1, EV_BEACON_FOUND,
@@ -236,7 +241,7 @@ enum _ev_t { EV_SCAN_TIMEOUT=1, EV_BEACON_FOUND,
              EV_JOINED, EV_RFU1, EV_JOIN_FAILED, EV_REJOIN_FAILED,
              EV_TXCOMPLETE, EV_LOST_TSYNC, EV_RESET, EV_RXCOMPLETE,
              EV_LINK_DEAD, EV_LINK_ALIVE, EV_SCAN_FOUND, EV_TXSTART,
-             EV_TXDONE, EV_DATARATE, EV_START_SCAN, EV_ADR_BACKOFF };
+             EV_TXDONE, EV_DATARATE, EV_START_SCAN, EV_ADR_BACKOFF, EV_SHUTDOWN };
 typedef enum _ev_t ev_t;
 
 
@@ -245,6 +250,12 @@ typedef enum _ev_t ev_t;
 enum {
     OPT_LORAWAN11 = 0x80,  // Running LoRaWAN 1.1
     OPT_OPTNEG    = 0x40,  // Send ResetInd mac command
+};
+
+// Ignore nbTrans for next TX attempt
+// Used by various services (streaming/fileupload/alcsync) to temporarily disable nbTrans
+enum {
+    IGN_NBTRANS = 0x80     // to be ORed to nbTrans (auto-cleared after TX)
 };
 
 // data stored in clmode
@@ -268,9 +279,9 @@ typedef struct {
     u4_t        seqnoADn;     // down stream seqno (AFCntDown)
 } session_t;
 
-// Compactified duty cycle/dwell time relative to baseAvail
+// duty cycle/dwell time relative to baseAvail in sec.
 // To avoid roll over this needs to be updated.
-typedef u1_t avail_t;
+typedef u2_t avail_t;
 
 #define MAX_MULTICAST_SESSIONS LCE_MCGRP_MAX
 
@@ -287,12 +298,12 @@ struct lmic_t {
     rps_t       rps;
     u1_t        rxsyms;
     u1_t        dndr;
-    s1_t        txpow;     // dBm -- needs to be combined with txPowAdj
+    s1_t        txpow;     // dBm -- needs to be combined with brdTxPowOff
 
     osjob_t     osjob;
 
     osxtime_t   baseAvail;                      // base time for availability
-    u1_t        globalAvail;                    // next available DC (global)
+    avail_t     globalAvail;                    // next available DC (global)
     u1_t        noDC;                           // disable all duty cycle
 
     const region_t* region;
@@ -329,6 +340,7 @@ struct lmic_t {
     u1_t        pollcnt;      // >0 waiting for an answer from network
     u1_t        nbTrans;      // ADR controlled frame repetition
     s1_t        txPowAdj;     // adjustment for txpow (ADR controlled)
+    s1_t        brdTxPowOff;  // board-specific power adjustment offset
     dr_t        datarate;     // current data rate
     u1_t        errcr;        // error coding rate (used for TX only)
     u1_t        rejoinCnt;    // adjustment for rejoin datarate
@@ -414,8 +426,12 @@ struct lmic_t {
     u1_t        noRXIQinversion;
 
     // automatic sending of MAC uplinks without payload
+    osjob_t     polljob;      // job to schedule engineUpdate in poll mode
     ostime_t    polltime;     // time when OP_POLL flag was set
     ostime_t    polltimeout;  // timeout when frame will be sent even without payload (default 0)
+
+    // radio power consumption
+    u4_t        radioPwr_ua;  // power consumption of current radio operation in uA
 
 #ifdef CFG_testpin
     // Signal specific event via a GPIO pin.
@@ -444,6 +460,7 @@ void  LMIC_init         (void);
 void  LMIC_reset        (void);
 void  LMIC_reset_ex     (u1_t regionIdx);
 int   LMIC_regionIdx    (u1_t regionCode);
+u1_t  LMIC_regionCode   (u1_t regionIdx);
 void  LMIC_clrTxData    (void);
 void  LMIC_setTxData    (void);
 int   LMIC_setTxData2   (u1_t port, u1_t* data, u1_t dlen, u1_t confirmed);
@@ -465,7 +482,7 @@ void  LMIC_tryRejoin     (void);
 int  LMIC_scan (ostime_t timeout);
 int  LMIC_track (ostime_t when);
 #endif
-void LMIC_setMultiCastSession (devaddr_t grpaddr, const u1_t* nwkKeyDn, const u1_t* appKey, u4_t seqnoAdn);
+int LMIC_setMultiCastSession (devaddr_t grpaddr, const u1_t* nwkKeyDn, const u1_t* appKey, u4_t seqnoAdn);
 
 void LMIC_setSession (u4_t netid, devaddr_t devaddr, const u1_t* nwkKey,
 #if defined(CFG_lorawan11)
@@ -481,6 +498,8 @@ dr_t     LMIC_slowestDr (); // slowest UP datarate
 rps_t    LMIC_updr2rps (u1_t dr);
 rps_t    LMIC_dndr2rps (u1_t dr);
 ostime_t LMIC_calcAirTime (rps_t rps, u1_t plen);
+u1_t     LMIC_maxAppPayload();
+ostime_t LMIC_nextTx (ostime_t now);
 
 // Simulation only APIs
 #if defined(CFG_simul)
@@ -498,7 +517,6 @@ DECL_ON_LMIC_EVENT;
 void     LMIC_enableFastJoin (void);
 void     LMIC_disableDC (void);
 ostime_t LMIC_dr2hsym (dr_t dr, s1_t num);
-ostime_t LMIC_nextTx (ostime_t now);
 void     LMIC_updateTx (ostime_t now);
 void     LMIC_getRxdErrInfo (s4_t* skew, u4_t* span);
 #endif

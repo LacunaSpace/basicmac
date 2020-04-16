@@ -41,13 +41,14 @@ enum {
 #define LWM_PRIO_MIN 0
 #define LWM_PRIO_MAX ~0
 
+int lwm_getmode ();
 void lwm_setmode (int mode);
-void lwm_setpriority (unsigned int priority);
+unsigned int lwm_setpriority (unsigned int priority);
 
 void lwm_request_send (lwm_job* job, unsigned int priority, lwm_tx txfunc);
-void lwm_clear_send (lwm_job* job);
+bool lwm_clear_send (lwm_job* job);
 
-void lwm_setadrprofile (const unsigned char* drlist, int n);
+void lwm_setadrprofile (int txPowAdj, const unsigned char* drlist, int n);
 
 #ifdef LWM_SLOTTED
 void lwm_slotparams (u4_t freq, dr_t dr, ostime_t interval, int slotsz, int missed_max, int timeouts_max);
@@ -63,6 +64,7 @@ enum {
     LWM_FLAG_DNW2       = TXRX_DNW2,
     LWM_FLAG_PING       = TXRX_PING,
 };
+#define LWM_FLAG_MASK (LWM_FLAG_ACK | LWM_FLAG_NAK | LWM_FLAG_DNW1 | LWM_FLAG_DNW2 | LWM_FLAG_PING)
 typedef void (*lwm_downlink) (int port, unsigned char* data, int dlen, unsigned int flags);
 void lwm_process_dl (lwm_downlink dlfunc);
 

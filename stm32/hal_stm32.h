@@ -33,12 +33,10 @@ void hal_clearMaxSleep (unsigned int level);
 
 #ifdef CFG_rtstats
 typedef struct {
-    uint32_t run_ms;
-    uint32_t sleep_ms[HAL_SLEEP_CNT];
+    uint32_t run_ticks;
+    uint32_t sleep_ticks[HAL_SLEEP_CNT];
 } hal_rtstats;
 
-void hal_rtstats_get (hal_rtstats* stats);
-void hal_rtstats_consume (hal_rtstats* stats);
 void hal_rtstats_collect (hal_rtstats* stats);
 #endif
 
@@ -65,11 +63,12 @@ bool pd_verify (void);
 void usart_init (void);
 void usart_irq (void);
 
-// TODO - use API from peripherals.h
-void flash_write (uint32_t* dst, uint32_t* src, uint32_t nwords, bool erase);
+void i2c_irq (void);
 
-#if defined(SVC_frag)
-// Glue for Fragmentation service
+#if defined(SVC_fuota)
+// Glue for FUOTA (fountain code) service
+
+#include "peripherals.h"
 
 #define fuota_flash_pagesz FLASH_PAGE_SZ
 #define fuota_flash_bitdefault 0
@@ -87,8 +86,5 @@ void flash_write (uint32_t* dst, uint32_t* src, uint32_t nwords, bool erase);
     (*((void**) (addr)))
 
 #endif
-
-// experimental
-bool hal_set_update (void* ptr);
 
 #endif

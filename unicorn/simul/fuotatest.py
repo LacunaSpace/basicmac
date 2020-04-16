@@ -1,9 +1,7 @@
-# Copyright (C) 2018-2018, Semtech Corporation.
-# All rights reserved.
+# Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
 #
-# This file is subject to the terms and conditions
-# defined in file 'LICENSE', which is part of this
-# source code package.
+# This file is subject to the terms and conditions defined in file 'LICENSE',
+# which is part of this source code package.
 
 from typing import Optional,Tuple
 

@@ -88,4 +88,34 @@ void trng_next (uint32_t* dest, int count);
 
 #endif
 
+
+#ifdef PERIPH_I2C
+// ------------------------------------------------
+// I²C perpipheral
+
+enum {
+    I2C_BUSY    = 1,
+    I2C_OK      = 0,
+    I2C_NAK     = -1,
+    I2C_ABORT   = -2,
+};
+
+typedef void (*i2c_cb) (int status);
+void i2c_xfer (unsigned int addr, unsigned char* buf, unsigned int wlen, unsigned int rlen,
+        i2c_cb cb, ostime_t timeout);
+void i2c_xfer_ex (unsigned int addr, unsigned char* buf, unsigned int wlen, unsigned int rlen,
+        ostime_t timeout, osjob_t* job, osjobcb_t cb, int* pstatus);
+void i2c_abort (void);
+
+#endif
+
+
+#ifdef PERIPH_ADC
+// ------------------------------------------------
+// Analog-to-Digital Converter
+
+unsigned int adc_read (unsigned int chnl, unsigned int rate);
+
+#endif
+
 #endif

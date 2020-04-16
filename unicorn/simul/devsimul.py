@@ -1,11 +1,9 @@
-# Copyright (C) 2018-2018, Semtech Corporation.
-# All rights reserved.
+# Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
 #
-# This file is subject to the terms and conditions
-# defined in file 'LICENSE', which is part of this
-# source code package.
+# This file is subject to the terms and conditions defined in file 'LICENSE',
+# which is part of this source code package.
 
-from typing import Any, Awaitable, Callable, List, MutableMapping, Optional, TextIO, Tuple, Union
+from typing import Any, Awaitable, Callable, List, MutableMapping, Optional, Set, TextIO, Tuple, Union
 from typing import cast
 
 import argparse
@@ -72,7 +70,7 @@ class Rps:
             assert crc==0 or crc==1,             f'unsupported crc: {crc}'
 
     @staticmethod
-    def isFSK(rps:int) -> int:
+    def isFSK(rps:int) -> bool:
         return (rps & 0x7) == 0
 
 class LoraMsg:
@@ -108,11 +106,14 @@ class LoraMsg:
     def __str__(self) -> str:
         sf = Rps.getSf(self.rps)
         bw = Rps.getBw(self.rps)
-        return 'xbeg=%.6f, xend=%.6f, freq=%d, %s, data=%s' % (
+        return 'xbeg=%.6f, xend=%.6f, freq=%d, %s, pdu=%s' % (
                 self.xbeg, self.xend,
                 self.freq,
                 'sf=%d, bw=%d' % (sf, bw) if sf else 'fsk',
                 self.pdu.hex())
+
+    def __repr__(self) -> str:
+        return 'LoraMsg<%s>' % self.__str__()
 
     # xbeg, xend, freq, rps, xpow, snr, dlen, data....
     SIM_RXTX_SPEC = '<iiIIiiI'
@@ -135,7 +136,7 @@ class LoraMsg:
                 len(self.pdu)) + self.pdu
 
     def match(self, freq:int, rps:int) -> bool:
-        return self.freq == freq and (Rps.isFSK(rps) if Rps.isFSK(self.rps)
+        return (self.freq == freq) and (Rps.isFSK(rps) if Rps.isFSK(self.rps)
                 else (self.rps == rps))
 
     @staticmethod
@@ -167,17 +168,29 @@ class LoraMsg:
     def tpreamble(self) -> float:
         return LoraMsg.symtime(self.rps, self.npreamble)
 
-class DnMedium:
-    def get_dn(self, rxon:int, rxtout:int, freq:int, rps:int, nsym:int=4) -> Optional[LoraMsg]:
+class Medium:
+    def __init__(self, put_up:Optional[Callable[[LoraMsg],None]]) -> None:
+        self._put_up = put_up
+
+    def reset_medium (self) -> None:
         raise NotImplementedError()
 
-class UpMedium:
-    def put_up(self, msg:LoraMsg) -> None:
+    def get_dn(self, rxon:int, rxtout:int, freq:int, rps:int, nsym:int=4, peek=False) -> Optional[LoraMsg]:
         raise NotImplementedError()
 
-class SimpleDnMedium(DnMedium):
-    def __init__(self) -> None:
+    def prune(self, ticks:int) -> List[LoraMsg]:
+        raise NotImplementedError()
+
+    def add_dn(self, msg:LoraMsg) -> None:
+        raise NotImplementedError()
+
+class SimpleMedium(Medium):
+    def __init__(self, put_up:Optional[Callable[[LoraMsg],None]]) -> None:
+        self._put_up = put_up
         self.msgs = IntervalTree()
+
+    def reset_medium (self) -> None:
+        self.msgs.clear()
 
     def add_dn(self, msg:LoraMsg) -> None:
         t0 = Simulation.time2ticks(msg.xbeg)
@@ -188,23 +201,24 @@ class SimpleDnMedium(DnMedium):
     def overlap(i1:Interval, i2:Interval) -> int:
         return min(i1.end, i2.end) - max(i1.begin, i2.begin) # type: ignore
 
-    def get_dn(self, rxon:int, rxtout:int, freq:int, rps:int, nsym:int=4) -> Optional[LoraMsg]:
+    def get_dn(self, rxon:int, rxtout:int, freq:int, rps:int, nsym:int=4, peek=False) -> Optional[LoraMsg]:
         rxw = Interval(rxon, rxon + rxtout)
         tpn = Simulation.time2ticks(LoraMsg.symtime(rps, nsym))
         for i in self.msgs.overlap(rxw[0], rxw[1]):
             m = i.data # type: LoraMsg
-            if m.match(freq, rps) and SimpleDnMedium.overlap(i, rxw) >= tpn:
+            if m.match(freq, rps) and (peek or SimpleMedium.overlap(i, rxw) >= tpn):
                 break
         else:
             return None
-        self.msgs.remove(i)
+        if not peek:
+            self.msgs.remove(i)
         return m
 
-    def prune(self, ticks:int) -> None:
-        exp = self.msgs.envelop(0, ticks)
+    def prune(self, ticks:int) -> List[LoraMsg]:
+        exp = cast(List[Interval], self.msgs.envelop(0, ticks))
         if exp:
             self.msgs.remove_envelop(0, ticks)
-        return exp
+        return [iv[2] for iv in exp]
 
 class TraceWriter:
     def __init__(self, buf:TextIO) -> None:
@@ -231,7 +245,7 @@ class TrafficTrace:
 class SimEvent:
     def __init__(self) -> None:
         self.e = asyncio.Event()
-        self.s = set()
+        self.s:Set[str] = set()
 
     def set(self, key:str) -> None:
         self.s.add(key)
@@ -250,6 +264,9 @@ class Simulation:
     FLASH_BASE = 0x20000000
     EE_BASE    = 0x30000000
 
+    class ResetException(BaseException):
+        pass
+
     @staticmethod
     def time2ticks(t:float) -> int:
         return int(t * 32768)
@@ -266,15 +283,22 @@ class Simulation:
 
     def now2ticks(self) -> int:
         return Simulation.time2ticks(asyncio.get_event_loop().time() - self.epoch)
- 
-    def __init__(self, hexfiles:List[str], debug:Optional[TraceWriter]=None, traffic:Optional[TrafficTrace]=None,
-            ramsz:int=16*1024, flashsz:int=128*1024, eesz:int=8*1024) -> None:
 
-        self.upm:Optional[UpMedium] = None
-        self.dnm:Optional[DnMedium] = None
+    @property
+    def now(self) -> float:
+        return asyncio.get_event_loop().time() - self.epoch
+
+    async def sleep_until(self, deadline:float) -> None:
+        delay = deadline - self.now
+        await asyncio.sleep(delay)
+
+    def __init__(self, put_up:Optional[Callable[[LoraMsg],None]],
+                 hexfiles:List[str], debug:Optional[TraceWriter]=None, traffic:Optional[TrafficTrace]=None,
+                 ramsz:int=16*1024, flashsz:int=128*1024, eesz:int=8*1024) -> None:
+
+        self.medium:Optional[Medium] = SimpleMedium(put_up)
 
         self.emu = uc.Uc(uc.UC_ARCH_ARM, uc.UC_MODE_THUMB)
-
         #self.emu.hook_add(uc.UC_HOOK_CODE,
         #        lambda uc, addr, size, sim: sim.trace(addr), self)
         self.emu.hook_add(uc.UC_HOOK_INTR,
@@ -311,11 +335,12 @@ class Simulation:
         self.isp = sp
         self.ipc = ep
 
-        self.ticks = 0
-        self.reset()
+        self._reset()
 
         self.rxparams:MutableMapping[str,int] = {}
         self.rxmsg:Optional[LoraMsg] = None
+
+        self.evlog : asyncio.Queue[Tuple[int,int,int]] = asyncio.Queue()
 
     def load_hexfile(self, hexfile:str) -> None:
         ih = IntelHex()
@@ -329,12 +354,18 @@ class Simulation:
             print('Error loading %s at 0x%08x (%d bytes):' % (hexfile, beg, len(mem)))
             raise
 
-    def step(self, ticks:int) -> int:
-        if self.dnm:
-            exp = self.dnm.prune(ticks if not self.rxing else self.rxparams['rxbeg'])
-            for iv in exp:
-                self.traffic.trace(iv[2], False, lost=True)
-        self.ticks = ticks
+    @property
+    def isHW(self) -> bool:
+        return False
+
+    def filterTraffic(self, deveui:Optional[str], devaddr:Optional[int]) -> None:
+        pass
+
+    def step(self) -> int:
+        exp = self.medium.prune(self.ticks if not self.rxing else self.rxparams['rxbeg'])
+        if exp and self.traffic:
+            for lm in exp:
+                self.traffic.trace(lm, False, lost=True)
         self.emu.emu_start(self.pc, 0xffffffff)
         if self.ex is not None:
             raise self.ex
@@ -372,30 +403,29 @@ class Simulation:
             now = self.now2ticks()
         return tticks # pretend we didn't overshoot
 
-    def check_irqs(self, ct:int) -> bool:
+    def check_irqs(self) -> bool:
         if self.irq_enabled() and self.event.is_set('irq'):
-            self.irq_invoke(ct)
+            self.irq_invoke()
             return True
         else:
             return False
 
+    async def shutdown(self) -> None:
+        pass
+
     async def run(self) -> None:
         sleepto = self.vsleepto if isinstance(asyncio.get_event_loop(),
                 VirtualTimeLoop) else self.rsleepto
-        ct = self.now2ticks()
+        self.ticks = self.now2ticks()
         while True:
-            nt = self.step(ct)
-            if self.check_irqs(ct):
+            nt = self.step()
+            if self.check_irqs():
                 continue
-            ct = await sleepto(nt, self.event.e)
-            self.check_irqs(ct)
+            self.ticks = await sleepto(nt, self.event.e)
+            self.check_irqs()
             self.event.clear('reset')
 
-    def attach(self, upm:Optional[UpMedium], dnm:Optional[DnMedium]) -> None:
-        self.upm = upm
-        self.dnm = dnm
-
-    def reset(self) -> None:
+    def _reset(self) -> None:
         self.vtor:Optional[int] = None
 
         self.gpio.reset()
@@ -408,16 +438,35 @@ class Simulation:
         self.pc = self.ipc
         self.emu.reg_write(uca.UC_ARM_REG_SP, self.isp)
         self.emu.reg_write(uca.UC_ARM_REG_LR, 0xcafebabe)
+        self.emu.reg_write(uca.UC_ARM_REG_CPSR, 0x33)
 
         self.epoch = asyncio.get_event_loop().time()
         self.ticks = 0
         self.sleep = 0
 
         self.event.set('reset')
+        self.medium.reset_medium()
+
+    async def reset(self) -> None:
+        self._reset()
+
+    async def get_evlog(self) -> Tuple[int,int,int]:
+        return await self.evlog.get()
+
+    def clear_evlog(self) -> List[Tuple[int,int,int]]:
+        l : List[Tuple[int,int,int]] = []
+        try:
+            while True:
+                l.append(self.evlog.get_nowait())
+        except asyncio.QueueEmpty:
+            pass
+        return l
 
     def irq_enabled(self) -> bool:
-        cpsr = cast(int, self.emu.reg_read(uca.UC_ARM_REG_CPSR))
-        return (cpsr & (1 << 7)) == 0
+        return (self.get_cpsr() & (1 << 7)) == 0
+
+    def get_cpsr(self) -> int:
+        return cast(int, self.emu.reg_read(uca.UC_ARM_REG_CPSR))
 
     def stack_push(self, value:int) -> None:
         sp = self.emu.reg_read(uca.UC_ARM_REG_SP) - 4
@@ -430,7 +479,7 @@ class Simulation:
         self.emu.reg_write(uca.UC_ARM_REG_SP, sp + 4)
         return value
 
-    def irq_invoke(self, ticks:int) -> None:
+    def irq_invoke(self) -> None:
         if self.irq_invoking:
             raise RuntimeError('Nested interrupt invocation')
         if self.vtor is None:
@@ -445,17 +494,11 @@ class Simulation:
             # set LR to magic value
             self.emu.reg_write(uca.UC_ARM_REG_LR, 0xfffffff1)
             self.pc = addr
-            self.step(ticks)
+            self.step()
         self.irq_invoking = False
 
-    def get_string(self, addr:int) -> str:
-        ba = bytearray()
-        while True:
-            ba += self.emu.mem_read(addr, 128)
-            nt = ba.find(0, -128)
-            if nt >= 0:
-                return ba[:nt].decode('utf-8')
-            addr += 128
+    def get_string(self, addr:int, length:int) -> str:
+        return self.emu.mem_read(addr, length).decode('utf-8')
 
     def svc_panic(self, params:Tuple[int,int,int], lr:int) -> bool:
         raise RuntimeError(
@@ -465,7 +508,7 @@ class Simulation:
 
     def svc_debug_str(self, params:Tuple[int,int,int], lr:int) -> bool:
         if self.debug is not None:
-            self.debug.write(self.get_string(params[0]))
+            self.debug.write(self.get_string(params[0], params[1]))
         return True
 
     def svc_ticks(self, params:Tuple[int,int,int], lr:int) -> bool:
@@ -491,8 +534,7 @@ class Simulation:
             LoraMsg.SIM_RXTX_SPEC_MAXSZ)), self.ticks)
         if self.traffic is not None:
             self.traffic.trace(m, True)
-        if self.upm:
-            self.upm.put_up(m)
+        self.medium._put_up(m)
         return True
 
     def svc_rx_start(self, params:Tuple[int,int,int], lr:int) -> bool:
@@ -503,17 +545,50 @@ class Simulation:
         self.rxing = True
         return True
 
+    def svc_rx_on(self, params:Tuple[int,int,int], lr:int) -> int:
+        self.rxparams['freq'] = params[0]
+        self.rxparams['rps'] = params[1]
+        self.rxparams['rxbeg'] = self.ticks
+        self.rxparams['rxtout'] = params[2]
+        self.rxing = True
+        v = 0
+        m = self.medium.get_dn(
+            self.rxparams['rxbeg'], self.rxparams['rxtout'],
+            self.rxparams['freq'], self.rxparams['rps'], peek=True)
+        if m:
+            # Don't return 0 as deadline here - 0 means there's no frame
+            v = numpy.int32(Simulation.time2ticks(m.xbeg + m.tpreamble())) or 1
+        self.emu.reg_write(uca.UC_ARM_REG_R0, v)
+        return True
+
+    def svc_rx_cad(self, params:Tuple[int,int,int], lr:int) -> int:
+        self.rxparams['freq'] = params[0]
+        self.rxparams['rps'] = params[1]
+        self.rxparams['rxbeg'] = self.ticks
+        self.rxparams['rxtout'] = LoraMsg.symtime(params[1], params[2])
+        v = 0
+        m = self.medium.get_dn(
+            self.rxparams['rxbeg'], self.rxparams['rxtout'],
+            self.rxparams['freq'], self.rxparams['rps'], peek=True)
+        if m:
+            v = 1  # activity detected
+        self.emu.reg_write(uca.UC_ARM_REG_R0, v)
+        return True
+
     def get_dn(self) -> Optional[LoraMsg]:
-        return None if self.dnm is None else self.dnm.get_dn(
+        return None if self.medium is None else self.medium.get_dn(
                 self.rxparams['rxbeg'], self.rxparams['rxtout'],
                 self.rxparams['freq'], self.rxparams['rps'])
 
     def svc_rx_do(self, params:Tuple[int,int,int], lr:int) -> bool:
         m = self.get_dn()
-        self.emu.reg_write(uca.UC_ARM_REG_R0, 1 if m else 0)
         self.rxmsg = m
         if m is None:
             self.rxing = False
+            r = 0
+        else:
+            r = numpy.int32(Simulation.time2ticks(m.xend)) or 1
+        self.emu.reg_write(uca.UC_ARM_REG_R0, r)
         return True
 
     def svc_rx_done(self, params:Tuple[int,int,int], lr:int) -> bool:
@@ -573,6 +648,12 @@ class Simulation:
 
         return True
 
+    def svc_reset(self, params:Tuple[int,int,int], lr:int) -> bool:
+        raise Simulation.ResetException()
+
+    def svc_log_ev(self, params:Tuple[int,int,int], lr:int) -> bool:
+        self.evlog.put_nowait(params)
+
     svc_lookup = {
             0   : svc_panic,
             128 : svc_debug_str,
@@ -587,6 +668,10 @@ class Simulation:
             137 : svc_irq,
             138 : svc_pio,
             139 : svc_uart,
+            140 : svc_reset,
+            141 : svc_rx_on,
+            142 : svc_rx_cad,
+            143 : svc_log_ev,
             }
 
     def trace(self, addr:int) -> None:
@@ -602,10 +687,14 @@ class Simulation:
                     params = (self.emu.reg_read(uca.UC_ARM_REG_R1),
                             self.emu.reg_read(uca.UC_ARM_REG_R2),
                             self.emu.reg_read(uca.UC_ARM_REG_R3))
-                    if handler(self, params, lr):
-                        self.emu.reg_write(uca.UC_ARM_REG_PC, lr)
-                    else:
-                        self.pc = lr
+                    try:
+                        if handler(self, params, lr):
+                            self.emu.reg_write(uca.UC_ARM_REG_PC, lr)
+                        else:
+                            self.pc = lr
+                            self.emu.emu_stop()
+                    except Simulation.ResetException:
+                        self._reset()
                         self.emu.emu_stop()
                 else:
                     raise RuntimeError('Unknown SVCID %d, lr=0x%08x'
@@ -623,6 +712,46 @@ class Simulation:
             self.emu.emu_stop()
         else:
             raise RuntimeError('Unknown special PC: 0x%08x' % address)
+
+
+    gpio_cmd_pin:int = 0
+    gpio_rst_pin:int = 0
+    gpio_rdy_pin:int = 0
+
+    async def modemInit(self, gpio_cmd_pin:int, gpio_rst_pin:int, gpio_rdy_pin:int) -> None:
+        self.gpio_cmd_pin = gpio_cmd_pin
+        self.gpio_rst_pin = gpio_rst_pin
+        self.gpio_rdy_pin = gpio_rdy_pin
+        self.gpio.drive(gpio_cmd_pin, 1)
+        self.gpio.extconfig(gpio_rst_pin, epup=True)
+        await asyncio.sleep(1)
+
+    async def modemSend(self, pdu:bytes) -> None:
+        self.gpio.drive(self.gpio_cmd_pin, 0)
+        await asyncio.sleep(0.01)
+        await self.uart.xfr_todevice(pdu)
+        await asyncio.sleep(0.025)
+        self.gpio.drive(self.gpio_cmd_pin, 1)
+
+    async def modemRecv(self) -> bytes:
+        buf = bytearray()
+        buf.extend(await self.uart.xfr_fromdevice(2))
+        buf.extend(await self.uart.xfr_fromdevice(buf[1] + 1))
+        await asyncio.sleep(0.1)
+        return bytes(buf)
+
+    async def modemWaitDataready(self, timeout:Optional[int]=None) -> None:
+        await asyncio.wait_for(self.gpio.waitfor(self.gpio_rdy_pin, True), timeout=timeout)
+
+    async def modemDataready(self) -> bool:
+        return self.gpio[self.gpio_rdy_pin]
+
+    async def modemWaitHostreset(self, timeout:Optional[int]=None) -> None:
+        assert self.gpio[self.gpio_rst_pin]
+        await asyncio.wait_for(self.gpio.waitfor(self.gpio_rst_pin, True), timeout=timeout)
+        await asyncio.wait_for(self.gpio.waitfor(self.gpio_rst_pin, False), timeout=2)
+
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()

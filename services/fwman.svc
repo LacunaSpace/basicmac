@@ -1,0 +1,17 @@
+# Copyright (C) 2016-2019 Semtech (International) AG. All rights reserved.
+#
+# This file is subject to the terms and conditions defined in file 'LICENSE',
+# which is part of this source code package.
+
+
+src:
+    - fuota/fwman.c
+    - fuota/micro-ecc/uECC.c
+
+require:
+    - frag
+    - lwmux
+
+hook.lwm_downlink: fwman_dl
+
+# vim: syntax=yaml
