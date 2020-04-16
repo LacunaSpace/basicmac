@@ -32,7 +32,7 @@ configuration.
 BasicMAC is a privately developed fork of LMIC, which was released
 publically by Semtech in 2019. In 2020, Semtech has announced it no
 longer intends to develop or support BasicMAC, so this repository is
-intended to become the primary repository for BasicMAC>
+intended to become the primary repository for BasicMAC.
 
 This repository borrows heavily from the Arduino LMIC port that was
 first published at https://github.com/matthijskooijman/arduino-lmic/.
