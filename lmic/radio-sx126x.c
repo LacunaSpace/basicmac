@@ -597,7 +597,7 @@ static void txfsk (void) {
     SetTx(64000); // timeout 1s (should not happen, TXDONE irq will be raised)
 }
 
-static void txcw (void) {
+void radio_cw (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
     SetDIO3AsTcxoCtrl();
@@ -616,7 +616,12 @@ static void txcw (void) {
 
 void radio_starttx (bool txcontinuous) {
     if (txcontinuous) {
-	txcw();
+	// XXX: This is probably not right. In 2.2, Semtech changed the
+	// 127x driver to rename txsw to radio_cw, but
+	// radio_starttx(true) now uses txfsk/txlora in continuous mode
+	// (which is apparently different from radio_cw), so that needs
+	// to be impliemented here as well
+	radio_cw();
     } else {
 	if (getSf(LMIC.rps) == FSK) { // FSK modem
 	    txfsk();
