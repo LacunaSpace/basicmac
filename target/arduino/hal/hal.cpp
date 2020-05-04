@@ -14,7 +14,7 @@
 #undef _GNU_SOURCE
 #include <Arduino.h>
 #include <SPI.h>
-#include "../lmic.h"
+#include "../basicmac.h"
 #include "hal.h"
 
 // Datasheet defins typical times until busy goes low. Most are < 200us,

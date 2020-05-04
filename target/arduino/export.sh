@@ -61,7 +61,7 @@ mkdir -p "$TARGET"/src
 # directories, the contained files are copied or linked, so that when
 # linking relative includes still work as expected
 $CMD "$SRC"/library.properties "$TARGET"
-$CMD "$SRC"/lmic.h "$TARGET"/src
+$CMD "$SRC"/basicmac.h "$TARGET"/src
 $CMD "$SRC"/../../lmic "$TARGET"/src
 $CMD "$SRC"/hal "$TARGET"/src
 $CMD "$SRC"/../../aes "$TARGET"/src

@@ -29,7 +29,7 @@
  *
  *******************************************************************************/
 
-#include <lmic.h>
+#include <basicmac.h>
 #include <hal/hal.h>
 #include <SPI.h>
 
