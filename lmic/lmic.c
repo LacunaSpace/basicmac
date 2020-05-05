@@ -144,45 +144,49 @@ u2_t os_crc16 (u1_t* data, uint len) {
 // ================================================================================
 // BEG NEW REGION STUFF
 
+#define LORA_UP_RPS(sf,bw) (MAKE_LORA_RPS((sf),(bw),CR_4_5,0,0))
+#define LORA_DN_RPS(sf,bw) (MAKE_LORA_RPS((sf),(bw),CR_4_5,0,1))
+#define FSK_UP_RPS()       (MAKE_FSK_RPS(0))
+
 // data rate tables
 #ifdef REG_DRTABLE_EU
 static const u1_t DR2RPS_EU[16] = {
-    LWUPDR(SF12, BW125), LWUPDR(SF11, BW125), LWUPDR(SF10, BW125), LWUPDR(SF9,  BW125),
-    LWUPDR(SF8,  BW125), LWUPDR(SF7,  BW125), LWUPDR(SF7,  BW250), LWUPDR(FSK,  BW125),
-    ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,
-    ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,
+    LORA_UP_RPS(SF12, BW125),    LORA_UP_RPS(SF11, BW125),    LORA_UP_RPS(SF10, BW125),    LORA_UP_RPS(SF9,  BW125),
+    LORA_UP_RPS(SF8,  BW125),    LORA_UP_RPS(SF7,  BW125),    LORA_UP_RPS(SF7,  BW250),    FSK_UP_RPS(),
+    ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,
+    ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,
 };
 #endif
 #ifdef REG_DRTABLE_125kHz
 static const u1_t DR2RPS_125kHz[16] = {
-    LWUPDR(SF12, BW125), LWUPDR(SF11, BW125), LWUPDR(SF10, BW125), LWUPDR(SF9,  BW125),
-    LWUPDR(SF8,  BW125), LWUPDR(SF7,  BW125), LWUPDR(SF7,  BW250), ILLEGAL_RPS,
-    ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,
-    ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,
+    LORA_UP_RPS(SF12, BW125),    LORA_UP_RPS(SF11, BW125),    LORA_UP_RPS(SF10, BW125),    LORA_UP_RPS(SF9,  BW125),
+    LORA_UP_RPS(SF8,  BW125),    LORA_UP_RPS(SF7,  BW125),    LORA_UP_RPS(SF7,  BW250),    ILLEGAL_RPS,
+    ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,
+    ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,
 };
 #endif
 #ifdef REG_DRTABLE_US
 static const u1_t DR2RPS_US[16] = {
-    LWUPDR(SF10, BW125), LWUPDR(SF9,  BW125), LWUPDR(SF8,  BW125), LWUPDR(SF7,  BW125),
-    LWUPDR(SF8,  BW500), ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,
-    LWDNDR(SF12, BW500), LWDNDR(SF11, BW500), LWDNDR(SF10, BW500), LWDNDR(SF9,  BW500),
-    LWDNDR(SF8,  BW500), LWDNDR(SF7,  BW500), ILLEGAL_RPS,         ILLEGAL_RPS,
+    LORA_UP_RPS(SF10, BW125),    LORA_UP_RPS(SF9,  BW125),    LORA_UP_RPS(SF8,  BW125),    LORA_UP_RPS(SF7,  BW125),
+    LORA_UP_RPS(SF8,  BW500),    ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,
+    LORA_DN_RPS(SF12, BW500),    LORA_DN_RPS(SF11, BW500),    LORA_DN_RPS(SF10, BW500),    LORA_DN_RPS(SF9,  BW500),
+    LORA_DN_RPS(SF8,  BW500),    LORA_DN_RPS(SF7,  BW500),    ILLEGAL_RPS,                 ILLEGAL_RPS,
 };
 #endif
 #ifdef REG_DRTABLE_AU
 static const u1_t DR2RPS_AU[16] = {
-    LWUPDR(SF12, BW125), LWUPDR(SF11, BW125), LWUPDR(SF10, BW125), LWUPDR(SF9,  BW125),
-    LWUPDR(SF8,  BW125), LWUPDR(SF7,  BW125), LWUPDR(SF7,  BW500), ILLEGAL_RPS,
-    LWDNDR(SF12, BW500), LWDNDR(SF11, BW500), LWDNDR(SF10, BW500), LWDNDR(SF9,  BW500),
-    LWDNDR(SF8,  BW500), LWDNDR(SF7,  BW500), ILLEGAL_RPS,         ILLEGAL_RPS,
+    LORA_UP_RPS(SF12, BW125),    LORA_UP_RPS(SF11, BW125),    LORA_UP_RPS(SF10, BW125),    LORA_UP_RPS(SF9,  BW125),
+    LORA_UP_RPS(SF8,  BW125),    LORA_UP_RPS(SF7,  BW125),    LORA_UP_RPS(SF7,  BW500),    ILLEGAL_RPS,
+    LORA_DN_RPS(SF12, BW500),    LORA_DN_RPS(SF11, BW500),    LORA_DN_RPS(SF10, BW500),    LORA_DN_RPS(SF9,  BW500),
+    LORA_DN_RPS(SF8,  BW500),    LORA_DN_RPS(SF7,  BW500),    ILLEGAL_RPS,                 ILLEGAL_RPS,
 };
 #endif
 #ifdef REG_DRTABLE_IN
 static const u1_t DR2RPS_IN[16] = {
-    LWUPDR(SF12, BW125), LWUPDR(SF11, BW125), LWUPDR(SF10, BW125), LWUPDR(SF9,  BW125),
-    LWUPDR(SF8,  BW125), LWUPDR(SF7,  BW125), ILLEGAL_RPS,         LWUPDR(FSK,  BW125),
-    ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,
-    ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,         ILLEGAL_RPS,
+    LORA_UP_RPS(SF12, BW125),    LORA_UP_RPS(SF11, BW125),    LORA_UP_RPS(SF10, BW125),    LORA_UP_RPS(SF9,  BW125),
+    LORA_UP_RPS(SF8,  BW125),    LORA_UP_RPS(SF7,  BW125),    ILLEGAL_RPS,                 FSK_UP_RPS(),
+    ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,
+    ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,                 ILLEGAL_RPS,
 };
 #endif
 #ifdef REG_DYN
@@ -543,6 +547,8 @@ ostime_t calcAirTime (rps_t rps, u1_t plen) {
     return (((ostime_t)tmp << sfx) * OSTICKS_PER_SEC + div/2) / div;
 }
 
+extern inline rps_t makeLoraRps  (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc);
+extern inline rps_t makeFskRps   (int nocrc);
 extern inline sf_t  getSf    (rps_t params);
 extern inline rps_t setSf    (rps_t params, sf_t sf);
 extern inline bw_t  getBw    (rps_t params);
@@ -553,7 +559,6 @@ extern inline int   getNocrc (rps_t params);
 extern inline rps_t setNocrc (rps_t params, int nocrc);
 extern inline int   getIh    (rps_t params);
 extern inline rps_t setIh    (rps_t params, int ih);
-extern inline rps_t makeRps  (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc);
 extern inline sf_t  isLora   (rps_t params);
 extern inline sf_t  isFsk    (rps_t params);
 extern inline int   enDro    (rps_t params);

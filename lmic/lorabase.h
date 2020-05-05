@@ -290,6 +290,12 @@ typedef u4_t devaddr_t;
 // RX quality (device)
 enum { RSSI_OFF=64, SNR_SCALEUP=4 };
 
+#define MAKE_LORA_RPS(sf,bw,cr,ih,nocrc) ((rps_t)((sf) | ((bw)<<3) | ((cr)<<5) | ((nocrc)?(1<<7):0) | ((ih&0xFF)<<8)))
+// FSK uses a subset of LORA fields, so just use MAKE_LORA_RPS here
+#define MAKE_FSK_RPS(nocrc) (MAKE_LORA_RPS(FSK, 0, 0, 0, nocrc))
+
+inline rps_t makeLoraRps  (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc) { return MAKE_LORA_RPS(sf, bw, cr, ih, nocrc); }
+inline rps_t makeFskRps   (int nocrc)                                    { return MAKE_FSK_RPS(nocrc); }
 inline sf_t  getSf   (rps_t params)            { return   (sf_t)(params &  0x7); }
 inline rps_t setSf   (rps_t params, sf_t sf)   { return (rps_t)((params & ~0x7) | sf); }
 inline bw_t  getBw   (rps_t params)            { return  (bw_t)((params >> 3) & 0x3); }
@@ -300,12 +306,6 @@ inline int   getNocrc(rps_t params)            { return        ((params >> 7) & 
 inline rps_t setNocrc(rps_t params, int nocrc) { return (rps_t)((params & ~0x80) | (nocrc<<7)); }
 inline int   getIh   (rps_t params)            { return        ((params >> 8) & 0xFF); }
 inline rps_t setIh   (rps_t params, int ih)    { return (rps_t)((params & ~0xFF00) | (ih<<8)); }
-inline rps_t makeRps (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc) {
-    return sf | (bw<<3) | (cr<<5) | (nocrc?(1<<7):0) | ((ih&0xFF)<<8);
-}
-#define MAKERPS(sf,bw,cr,ih,nocrc) ((rps_t)((sf) | ((bw)<<3) | ((cr)<<5) | ((nocrc)?(1<<7):0) | ((ih&0xFF)<<8)))
-#define LWUPDR(sf,bw) ((u1_t)MAKERPS((sf),(bw),CR_4_5,0,0))
-#define LWDNDR(sf,bw) ((u1_t)MAKERPS((sf),(bw),CR_4_5,0,1))
 inline sf_t  isLora  (rps_t params)            { return   getSf(params) >= SF7 && getSf(params) <= SF12; }
 inline sf_t  isFsk   (rps_t params)            { return   getSf(params) == FSK; }
 
