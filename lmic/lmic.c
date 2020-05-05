@@ -471,7 +471,7 @@ static u1_t numBcnChannels() {
 }
 
 static dr_t rps2dndr (rps_t rps) {
-    for( dr_t dr = 15; dr >= 0; dr-- ) {
+    for( dr_t dr = 15; dr != (dr_t)-1; dr-- ) {
         if( setNocrc(REGION.dr2rps[dr], 1) == rps ) {
             return dr;
         }
