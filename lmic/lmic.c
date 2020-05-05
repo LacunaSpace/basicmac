@@ -466,9 +466,11 @@ static rps_t dndr2rps (dr_t dr) {
     return setNocrc(updr2rps(dr), 1);
 }
 
+#if !defined(DISABLE_CLASSB)
 static u1_t numBcnChannels() {
     return REG_IS_FIX() ? 8 : 1;
 }
+#endif // !defined(DISABLE_CLASSB)
 
 static dr_t rps2dndr (rps_t rps) {
     for( dr_t dr = 15; dr != (dr_t)-1; dr-- ) {
@@ -657,6 +659,7 @@ static void addRxdErr (u1_t rxdelay) {
     LMIC.rxdErrIdx = (LMIC.rxdErrIdx + 1) % RXDERR_NUM;
 }
 
+#if defined(CFG_testpin) || defined(CFG_extapi)
 static s4_t evalRxdErr (u4_t* span) {
     s4_t min = 0x7FFFFFFF, min2=0x7FFFFFFF;
     s4_t max = 0x80000000, max2=0x80000000;
@@ -674,6 +677,7 @@ static s4_t evalRxdErr (u4_t* span) {
     *span = max2-min2;
     return (sum - max - min + ((RXDERR_NUM-2)/2)) / (RXDERR_NUM-2);
 }
+#endif
 
 static void adjustByRxdErr (u1_t rxdelay, u1_t dr) {
 #ifdef CFG_testpin
@@ -2978,10 +2982,11 @@ static void engineUpdate (void) {
 #endif // CFG_autojoin
 
     ostime_t now    = os_getTime();
-    ostime_t rxtime = 0;
     ostime_t txbeg  = 0;
 
 #if !defined(DISABLE_CLASSB)
+    ostime_t rxtime = 0;
+
     if( (LMIC.opmode & OP_SCAN) != 0 ) {
         // Looking for a beacon - LMIC.bcninfo.txtime is timeout for scan
         // Cancel onging TX/RX transaction

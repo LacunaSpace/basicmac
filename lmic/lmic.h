@@ -155,7 +155,7 @@ enum { MAX_RXSYMS         = 100 };   // stop tracking beacon beyond this
 #endif
 
 #define LINK_CHECK_OFF  ((s4_t)0x80000000)
-#define LINK_CHECK_INIT (-LMIC.adrAckLimit)
+#define LINK_CHECK_INIT ((s4_t)(-LMIC.adrAckLimit))
 #define LINK_CHECK_DEAD (LMIC.adrAckDelay)
 
 enum { TIME_RESYNC        = 6*128 }; // secs
@@ -205,7 +205,7 @@ typedef struct {
 // purpose of receive window - lmic_t.rxState
 enum { RADIO_STOP=0, RADIO_TX=1, RADIO_RX=2, RADIO_RXON=3, RADIO_TXCW, RADIO_CCA, RADIO_INIT, RADIO_CAD, RADIO_TXCONT };
 // Netid values /  lmic_t.netid
-enum { NETID_NONE=(int)~0U, NETID_MASK=(int)0xFFFFFF };
+enum { NETID_NONE=~0U, NETID_MASK=0xFFFFFF };
 // MAC operation modes (lmic_t.opmode).
 enum { OP_NONE     = 0x0000,
        OP_SCAN     = 0x0001, // radio scan to find a beacon
