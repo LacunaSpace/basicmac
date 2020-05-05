@@ -306,8 +306,6 @@ inline rps_t makeRps (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc) {
 #define MAKERPS(sf,bw,cr,ih,nocrc) ((rps_t)((sf) | ((bw)<<3) | ((cr)<<5) | ((nocrc)?(1<<7):0) | ((ih&0xFF)<<8)))
 #define LWUPDR(sf,bw) ((u1_t)MAKERPS((sf),(bw),CR_4_5,0,0))
 #define LWDNDR(sf,bw) ((u1_t)MAKERPS((sf),(bw),CR_4_5,0,1))
-// Two frames with params r1/r2 would interfere on air: same SFx + BWx 
-inline int sameSfBw(rps_t r1, rps_t r2) { return ((r1^r2)&0x1F) == 0; }
 inline sf_t  isLora  (rps_t params)            { return   getSf(params) >= SF7 && getSf(params) <= SF12; }
 inline sf_t  isFsk   (rps_t params)            { return   getSf(params) == FSK; }
 

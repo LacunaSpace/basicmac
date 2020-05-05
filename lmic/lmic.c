@@ -554,7 +554,6 @@ extern inline rps_t setNocrc (rps_t params, int nocrc);
 extern inline int   getIh    (rps_t params);
 extern inline rps_t setIh    (rps_t params, int ih);
 extern inline rps_t makeRps  (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc);
-extern inline int   sameSfBw (rps_t r1, rps_t r2);
 extern inline sf_t  isLora   (rps_t params);
 extern inline sf_t  isFsk    (rps_t params);
 extern inline int   enDro    (rps_t params);
