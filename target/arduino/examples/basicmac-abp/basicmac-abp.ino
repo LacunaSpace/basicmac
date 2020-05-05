@@ -209,7 +209,16 @@ void setup() {
 
     #if defined(CFG_eu868)
     // These are defined by the LoRaWAN specification
-    const uint8_t EU_DR_SF12 = 0, EU_DR_SF9 = 3, EU_DR_SF7 = 5, EU_DR_SF7_BW250 = 6;
+    enum {
+        EU_DR_SF12 = 0,
+        EU_DR_SF11 = 1,
+        EU_DR_SF10 = 2,
+        EU_DR_SF9 = 3,
+        EU_DR_SF8 = 4,
+        EU_DR_SF7 = 5,
+        EU_DR_SF7_BW250 = 6,
+        EU_DR_FSK = 7,
+    };
 
     // Set up the channels used by the Things Network, which corresponds
     // to the defaults of most gateways. Without this, only three base
@@ -227,7 +236,7 @@ void setup() {
     LMIC_setupChannel(5, 867500000, DR_RANGE_MAP(EU_DR_SF12, EU_DR_SF7));      // g-band
     LMIC_setupChannel(6, 867700000, DR_RANGE_MAP(EU_DR_SF12, EU_DR_SF7));      // g-band
     LMIC_setupChannel(7, 867900000, DR_RANGE_MAP(EU_DR_SF12, EU_DR_SF7));      // g-band
-    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(FSK,  FSK));      // g2-band
+    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(EU_DR_FSK,  EU_DR_FSK));      // g2-band
 
     // TTN uses SF9 at 869.525Mhz for its RX2 window (frequency is
     // default LoRaWAN, SF is different, but set them both to be
