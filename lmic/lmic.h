@@ -133,7 +133,7 @@ typedef struct {
     u1_t                beaconLen;              // beacon length
     ostime_t            beaconAirtime;          // beacon air time
     eirp_t              maxEirp;                // max. EIRP (initial value)
-    u1_t                rx1DrOff[8];            // RX1 data rate offsets
+    s1_t                rx1DrOff[8];            // RX1 data rate offsets
     u1_t                dr2maxAppPload[16];     // max application payload (assuming no repeater and no fopts)
     u1_t                regcode;                // external region code
 
