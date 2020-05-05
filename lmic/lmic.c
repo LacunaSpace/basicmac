@@ -3433,6 +3433,11 @@ ostime_t LMIC_nextTx (ostime_t now) {
     return nextTx(now);
 }
 
+// Remove duty cycle limitations
+void LMIC_disableDC (void) {
+    LMIC.noDC = 1;
+}
+
 #if defined(CFG_simul)
 #include "addr2func.h"
 #include "arr2len.h"
@@ -3445,11 +3450,6 @@ ostime_t LMIC_nextTx (ostime_t now) {
 // Call directly after LMIC_startJoining() returns non-zero.
 void LMIC_enableFastJoin (void) {
     // XXX deprecated
-}
-
-// Remove duty cycle limitations
-void LMIC_disableDC (void) {
-    LMIC.noDC = 1;
 }
 
 /// Used for regression testing

@@ -500,6 +500,7 @@ rps_t    LMIC_dndr2rps (u1_t dr);
 ostime_t LMIC_calcAirTime (rps_t rps, u1_t plen);
 u1_t     LMIC_maxAppPayload();
 ostime_t LMIC_nextTx (ostime_t now);
+void     LMIC_disableDC (void);
 
 // Simulation only APIs
 #if defined(CFG_simul)
@@ -515,7 +516,6 @@ DECL_ON_LMIC_EVENT;
 // !!!See implementation for caveats!!!
 #if defined(CFG_extapi)
 void     LMIC_enableFastJoin (void);
-void     LMIC_disableDC (void);
 ostime_t LMIC_dr2hsym (dr_t dr, s1_t num);
 void     LMIC_updateTx (ostime_t now);
 void     LMIC_getRxdErrInfo (s4_t* skew, u4_t* span);
