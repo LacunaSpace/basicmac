@@ -342,7 +342,7 @@ struct lmic_t {
     s1_t        txPowAdj;     // adjustment for txpow (ADR controlled)
     s1_t        brdTxPowOff;  // board-specific power adjustment offset
     dr_t        datarate;     // current data rate
-    u1_t        errcr;        // error coding rate (used for TX only)
+    cr_t        errcr;        // error coding rate (used for TX only)
     u1_t        rejoinCnt;    // adjustment for rejoin datarate
     s2_t        drift;        // last measured drift
     s2_t        lastDriftDiff;

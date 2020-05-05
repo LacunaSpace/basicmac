@@ -3098,7 +3098,7 @@ static void engineUpdate (void) {
                 }
                 LMIC.osjob.func = FUNC_ADDR(updataDone);
             }
-            LMIC.rps    = setCr(updr2rps(txdr), (cr_t)LMIC.errcr);
+            LMIC.rps    = setCr(updr2rps(txdr), LMIC.errcr);
             LMIC.dndr   = txdr;  // carry TX datarate (can be != LMIC.datarate) over to txDone/setupRx1
             LMIC.opmode = (LMIC.opmode & ~(OP_POLL|OP_RNDTX)) | OP_TXRXPEND | OP_NEXTCHNL;
             updateTx(txbeg);
