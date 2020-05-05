@@ -2160,6 +2160,7 @@ static void txDone (u1_t delay, osjobcb_t func) {
 
 
 static void onJoinFailed (osjob_t* osjob) {
+    (void)osjob; // unused
     // Notify app - must call LMIC_reset() to stop joining
     // otherwise join procedure continues.
     reportEvent(EV_JOIN_FAILED);
@@ -2260,6 +2261,7 @@ static bit_t processJoinAccept (void) {
 
 
 static void processRx2Jacc (osjob_t* osjob) {
+    (void)osjob; // unused
     if( LMIC.dataLen == 0 )
         LMIC.txrxFlags = 0;  // nothing in 1st/2nd DN slot
     processJoinAccept();
@@ -2267,23 +2269,27 @@ static void processRx2Jacc (osjob_t* osjob) {
 
 
 static void setupRx2Jacc (osjob_t* osjob) {
+    (void)osjob; // unused
     LMIC.osjob.func = FUNC_ADDR(processRx2Jacc);
     setupRx2();
 }
 
 
 static void processRx1Jacc (osjob_t* osjob) {
+    (void)osjob; // unused
     if( LMIC.dataLen == 0 || !processJoinAccept() )
         schedRx2(DELAY_JACC2, FUNC_ADDR(setupRx2Jacc));
 }
 
 
 static void setupRx1Jacc (osjob_t* osjob) {
+    (void)osjob; // unused
     setupRx1(FUNC_ADDR(processRx1Jacc));
 }
 
 
 static void jreqDone (osjob_t* osjob) {
+    (void)osjob; // unused
     txDone(DELAY_JACC1, FUNC_ADDR(setupRx1Jacc));
     reportEvent(EV_TXDONE);
 }
@@ -2294,10 +2300,12 @@ static void jreqDone (osjob_t* osjob) {
 static bit_t processDnData(void);
 
 static void processRx2DnDataDelay (osjob_t* osjob) {
+    (void)osjob; // unused
     processDnData();
 }
 
 static void processRx2DnData (osjob_t* osjob) {
+    (void)osjob; // unused
     if( LMIC.dataLen == 0 ) {
         LMIC.txrxFlags = (LMIC.txrxFlags & TXRX_NOTX) | 0;  // nothing in 1st/2nd DN slot
         // Delay callback processing to avoid up TX while gateway is txing our missed frame!
@@ -2312,18 +2320,21 @@ static void processRx2DnData (osjob_t* osjob) {
 
 
 static void setupRx2DnData (osjob_t* osjob) {
+    (void)osjob; // unused
     LMIC.osjob.func = FUNC_ADDR(processRx2DnData);
     setupRx2();
 }
 
 
 static void processRx1DnData (osjob_t* osjob) {
+    (void)osjob; // unused
     if( LMIC.dataLen == 0 || !processDnData() ) {
         schedRx2(LMIC.dn1Dly+DELAY_EXTDNW2, FUNC_ADDR(setupRx2DnData));
     }
 }
 
 static void processRx2ClassC (osjob_t* osjob) {
+    (void)osjob; // unused
     if( LMIC.dataLen != 0 ) {
         LMIC.txrxFlags = TXRX_DNW2;
         if ((LMIC.devaddr == os_rlsbf4(&LMIC.frame[OFF_DAT_ADDR]) && decodeFrame()) || decodeMultiCastFrame() ) {
@@ -2344,16 +2355,19 @@ static void setupRx2ClassC () {
 }
 
 static void processRx1ClassC (osjob_t* osjob) {
+    (void)osjob; // unused
     if( !processDnData() ) {
         setupRx2ClassC();
     }
 }
 
 static void setupRx1DnData (osjob_t* osjob) {
+    (void)osjob; // unused
     setupRx1(FUNC_ADDR(processRx1DnData));
 }
 
 static void setupRx1ClassC (osjob_t* osjob) {
+    (void)osjob; // unused
     setupRx1(FUNC_ADDR(processRx1ClassC));
 }
 
@@ -2368,6 +2382,7 @@ static void txError (void) {
 
 
 static void updataDone (osjob_t* osjob) {
+    (void)osjob; // unused
     reportEvent(EV_TXDONE);
     // check if rx window is to be scheduled
     // (dataLen is reset by radio if tx didn't complete regularly and txend is unknown)
@@ -2728,6 +2743,7 @@ static void buildJoinRequest (u1_t ftype) {
 }
 
 static void startJoining (osjob_t* osjob) {
+    (void)osjob; // unused
     // reset and calibrate radio
     LMIC.freq = (REGION.maxFreq - REGION.minFreq) / 2;
     os_radio(RADIO_INIT);
@@ -2766,6 +2782,7 @@ bit_t LMIC_startJoining (void) {
 
 #if !defined(DISABLE_CLASSB)
 static void processPingRx (osjob_t* osjob) {
+    (void)osjob; // unused
     if( LMIC.dataLen != 0 ) {
         LMIC.txrxFlags = TXRX_PING;
         if( decodeFrame() ) {
@@ -2877,6 +2894,7 @@ static bit_t processDnData (void) {
 
 #if !defined(DISABLE_CLASSB)
 static void processBeacon (osjob_t* osjob) {
+    (void)osjob; // unused
     ostime_t lasttx = LMIC.bcninfo.txtime;   // save previous - decodeBeacon overwrites
     u1_t flags = LMIC.bcninfo.flags;
     ev_t ev;
@@ -2930,12 +2948,14 @@ static void processBeacon (osjob_t* osjob) {
 }
 
 static void startRxBcn (osjob_t* osjob) {
+    (void)osjob; // unused
     LMIC.osjob.func = FUNC_ADDR(processBeacon);
     os_radio(RADIO_RX);
 }
 
 
 static void startRxPing (osjob_t* osjob) {
+    (void)osjob; // unused
     LMIC.osjob.func = FUNC_ADDR(processPingRx);
     os_radio(RADIO_RX);
 }
