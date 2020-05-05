@@ -70,7 +70,6 @@ static const char* const evnames[] = {
     [EV_LOST_TSYNC]     = "LOST_TSYNC",
     [EV_RESET]          = "RESET",
     [EV_RXCOMPLETE]     = "RXCOMPLETE",
-    [EV_ADR_BACKOFF]    = "ADR_BACKOFF",
     [EV_LINK_DEAD]      = "LINK_DEAD",
     [EV_LINK_ALIVE]     = "LINK_ALIVE",
     [EV_SCAN_FOUND]     = "SCAN_FOUND",
