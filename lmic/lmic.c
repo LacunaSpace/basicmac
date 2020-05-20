@@ -440,10 +440,6 @@ static void setAvail (avail_t* pavail, osxtime_t t) {
     *pavail = v;
 }
 
-static dr_t decDR (dr_t dr) {  // move to slower DR
-    return dr == 0 ? 0 : dr-1;
-}
-
 static dr_t lowerDR (dr_t dr, u1_t n) {
     return dr <= n ? 0 : dr-n;
 }
@@ -1181,7 +1177,7 @@ done:
                 failed = 1; // we have tried all DR - signal EV_JOIN_FAILED
             }
             else {
-                setDrJoin(DRCHG_NOJACC, decDR(LMIC.datarate));
+                setDrJoin(DRCHG_NOJACC, lowerDR(LMIC.datarate, 1));
             }
         }
         delay = rndDelay(255 >> LMIC.datarate);
@@ -2846,8 +2842,8 @@ static bit_t processDnData (void) {
                 if (LMIC.txPowAdj) {
                     setDrTxpow(DRCHG_NOADRACK, LMIC.datarate, 0);
                 }
-                if (decDR(LMIC.datarate) != LMIC.datarate) {
-                    setDrTxpow(DRCHG_NOADRACK, decDR(LMIC.datarate), KEEP_TXPOWADJ);
+                if (lowerDR(LMIC.datarate, 1) != LMIC.datarate) {
+                    setDrTxpow(DRCHG_NOADRACK, lowerDR(LMIC.datarate, 1), KEEP_TXPOWADJ);
                 } else if (REG_IS_FIX()
 #ifdef REG_FIX
                         && enableAllChannels_fix()
