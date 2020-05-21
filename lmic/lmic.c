@@ -828,7 +828,6 @@ static dr_t prepareDnDr (dr_t updr) {
 #ifdef REG_DYN
 
 static void prepareDn_dyn () {
-    LMIC.dndr = prepareDnDr(LMIC.dndr);
     // Check reconfigured DN link freq
     freq_t dnfreq = LMIC.dyn.chDnFreq[LMIC.txChnl];
     if( dnfreq ) {
@@ -1297,7 +1296,6 @@ static void initDefaultChannels_fix (void) {
 }
 
 static void prepareDn_fix () {
-    LMIC.dndr = prepareDnDr(LMIC.dndr);
     LMIC.freq = REGION.baseFreqDn
         + (LMIC.txChnl % (REGION.numChDnBlocks*8))
         * (REGION.baseFreqFix ? DNCHSPACING_500kHz : DNCHSPACING_125kHz);
@@ -3100,7 +3098,8 @@ static void engineUpdate (void) {
                 LMIC.osjob.func = FUNC_ADDR(updataDone);
             }
             LMIC.rps    = setCr(updr2rps(txdr), LMIC.errcr);
-            LMIC.dndr   = txdr;  // carry TX datarate (can be != LMIC.datarate) over to txDone/setupRx1
+            // Calculate dndr to use based on txdr (can be != LMIC.datarate for joins)
+            LMIC.dndr = prepareDnDr(txdr);
             LMIC.opmode = (LMIC.opmode & ~(OP_POLL|OP_RNDTX)) | OP_TXRXPEND | OP_NEXTCHNL;
             updateTx(txbeg);
             reportEvent(EV_TXSTART);
