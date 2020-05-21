@@ -1012,7 +1012,7 @@ void radio_startrx (bool rxcontinuous) {
     // set power consumption for statistics
     LMIC.radioPwr_ua = 11500;
 
-    if (getSf(LMIC.rps) == FSK) { // FSK modem
+    if (isFsk(LMIC.rps)) { // FSK modem
         rxfsk(rxcontinuous);
     } else { // LoRa modem
         if (rxcontinuous) {
@@ -1031,7 +1031,7 @@ void radio_cad (void) {
 
 void radio_starttx (bool txcontinuous) {
     ASSERT( (readReg(RegOpMode) & OPMODE_MASK) == OPMODE_SLEEP );
-    if (getSf(LMIC.rps) == FSK) { // FSK modem
+    if (isFsk(LMIC.rps)) { // FSK modem
         txfsk(txcontinuous);
     } else { // LoRa modem
         txlora(txcontinuous);
@@ -1058,7 +1058,7 @@ void radio_cca (void) {
     writeReg(RegLna, 0b00100011); // highest gain, boost enable
 
     // set receiver bandwidth (SSB)
-    writeReg(FSKRegRxBw, (getSf(LMIC.rps) == FSK) ? 0x0B /* 50kHz SSB */ :
+    writeReg(FSKRegRxBw, (isFsk(LMIC.rps)) ? 0x0B /* 50kHz SSB */ :
              3 - getBw(LMIC.rps)); // 62.5/125/250kHz SSB (RxBwMant=0, RxBwExp 3/2/1)
 
     // set power consumption for statistics
@@ -1160,7 +1160,7 @@ void radio_init (bool calibrate) {
 // (run by irqjob)
 bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
     // dispatch modem
-    if (getSf(LMIC.rps) == FSK) { // FSK modem
+    if (isFsk(LMIC.rps)) { // FSK modem
         u1_t irqflags1 = readReg(FSKRegIrqFlags1);
         u1_t irqflags2 = readReg(FSKRegIrqFlags2);
 

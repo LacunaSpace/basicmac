@@ -308,6 +308,8 @@ inline rps_t makeRps (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc) {
 #define LWDNDR(sf,bw) ((u1_t)MAKERPS((sf),(bw),CR_4_5,0,1))
 // Two frames with params r1/r2 would interfere on air: same SFx + BWx 
 inline int sameSfBw(rps_t r1, rps_t r2) { return ((r1^r2)&0x1F) == 0; }
+inline sf_t  isLora  (rps_t params)            { return   getSf(params) >= SF7 && getSf(params) <= SF12; }
+inline sf_t  isFsk   (rps_t params)            { return   getSf(params) == FSK; }
 
 // return 1 for low data rate optimize should be enabled (symbol time equal or above 16.384 ms) else 0
 // Must be enabled for: SF11/BW125, SF12/BW125, SF12/BW250

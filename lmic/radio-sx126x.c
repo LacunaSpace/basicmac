@@ -623,7 +623,7 @@ void radio_starttx (bool txcontinuous) {
         // to be impliemented here as well
         radio_cw();
     } else {
-        if (getSf(LMIC.rps) == FSK) { // FSK modem
+        if (isFsk(LMIC.rps)) { // FSK modem
             txfsk();
         } else { // LoRa modem
             txlora();
@@ -746,7 +746,7 @@ void radio_cad (void) {
 }
 
 void radio_startrx (bool rxcontinuous) {
-    if (getSf(LMIC.rps) == FSK) { // FSK modem
+    if (isFsk(LMIC.rps)) { // FSK modem
         rxfsk(rxcontinuous);
     } else { // LoRa modem
         rxlora(rxcontinuous);
@@ -804,7 +804,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
     uint16_t irqflags = GetIrqStatus();
 
     // dispatch modem
-    if (getSf(LMIC.rps) == FSK) { // FSK modem
+    if (isFsk(LMIC.rps)) { // FSK modem
         if (irqflags & IRQ_TXDONE) { // TXDONE
             BACKTRACE();
             // save exact tx time

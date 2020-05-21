@@ -505,12 +505,12 @@ int getSensitivity (rps_t rps) {
 }
 
 ostime_t calcAirTime (rps_t rps, u1_t plen) {
-    u1_t bw = getBw(rps);  // 0,1,2 = 125,250,500kHz
-    u1_t sf = getSf(rps);  // 0=FSK, 1..6 = SF7..12
-    if( sf == FSK ) {
+    if( isFsk(rps) ) {
         return (plen+/*preamble*/5+/*syncword*/3+/*len*/1+/*crc*/2) * /*bits/byte*/8
             * (s4_t)OSTICKS_PER_SEC / /*kbit/s*/50000;
     }
+    u1_t bw = getBw(rps);  // 0,1,2 = 125,250,500kHz
+    u1_t sf = getSf(rps);
     u1_t sfx = 4*(sf+(7-SF7));
     u1_t q = sfx - 8*enDro(rps);
     int tmp = 8*plen - sfx + 28 + (getNocrc(rps)?0:16) - (getIh(rps)?20:0);
@@ -554,6 +554,8 @@ extern inline int   getIh    (rps_t params);
 extern inline rps_t setIh    (rps_t params, int ih);
 extern inline rps_t makeRps  (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc);
 extern inline int   sameSfBw (rps_t r1, rps_t r2);
+extern inline sf_t  isLora   (rps_t params);
+extern inline sf_t  isFsk    (rps_t params);
 extern inline int   enDro    (rps_t params);
 
 
@@ -847,7 +849,7 @@ static drmap_t all125up () {
     drmap_t map = 0;
     for( u1_t dr=0; dr < 16; dr++ ) {
         rps_t rps = REGION.dr2rps[dr];
-        if( rps != ILLEGAL_RPS && getSf(rps) != FSK
+        if( rps != ILLEGAL_RPS && isLora(rps)
             && getBw(rps) == BW125 && !getNocrc(rps) ) // not DN only DR
             map |= 1<<dr;
     }
@@ -2107,7 +2109,7 @@ static void setupRx2 (void) {
 
 static void schedRx2 (u1_t delay, osjobcb_t func) {
 #if defined(CFG_eu868) && !defined(CFG_kr920)
-    if( getSf(dndr2rps(LMIC.dn2Dr)) == FSK ) {
+    if( isFsk(dndr2rps(LMIC.dn2Dr)) ) {
         LMIC.rxtime = LMIC.txend + delay*sec2osticks(1) - PRERX_FSK*us2osticksRound(160); // (8bit/50kbps=160us)
         LMIC.rxsyms = RXLEN_FSK;
     }
@@ -2142,7 +2144,7 @@ static void txDone (u1_t delay, osjobcb_t func) {
     prepareDn();
     LMIC.rps  = dndr2rps(LMIC.dndr);
 
-    if( getSf(LMIC.rps) == FSK ) {
+    if( isFsk(LMIC.rps) ) {
         LMIC.rxtime = LMIC.txend + delay*sec2osticks(1) - PRERX_FSK*us2osticksRound(160); // (8bit/50kbps=160us)
         LMIC.rxsyms = RXLEN_FSK;
     } else {
