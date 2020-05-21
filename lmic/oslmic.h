@@ -51,6 +51,13 @@ typedef const char*     str_t;
 #define ASSERT(cond) do { } while (0)
 #endif
 
+#include <assert.h>
+#if __cplusplus >= 201103L || defined(static_assert)
+#define LMIC_STATIC_ASSERT static_assert
+#else
+#define LMIC_STATIC_ASSERT(expr, msg)
+#endif
+
 #ifdef __cplusplus
 extern "C"{
 #endif
