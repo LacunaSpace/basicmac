@@ -587,7 +587,7 @@ static void decPollcnt (void) {
 //      500kHz   |  8   9  10  11  12  13
 //
 static ostime_t dr2hsym (dr_t dr, s1_t num) {
-    rps_t rps = REGION.dr2rps[dr];
+    rps_t rps = updr2rps(dr);
     u1_t sf = getSf(rps);
     u1_t bw = getBw(rps);
     LMIC_STATIC_ASSERT(BW125 == 0, "BW125 assumed to be 0");
