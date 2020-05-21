@@ -590,7 +590,8 @@ static ostime_t dr2hsym (dr_t dr, s1_t num) {
     rps_t rps = REGION.dr2rps[dr];
     u1_t sf = getSf(rps);
     u1_t bw = getBw(rps);
-    ASSERT(sf >= SF7 && sf <=SF12 && bw >= BW125 && bw <= BW500);
+    LMIC_STATIC_ASSERT(BW125 == 0, "BW125 assumed to be 0");
+    ASSERT(sf >= SF7 && sf <= SF12 && bw <= BW500);
     s4_t us = num << (9 + sf - SF7 - bw);  // 10 => 9 half symbol time
     return us2osticks(us);
 }
