@@ -1185,15 +1185,15 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             LMIC.rxtime  = irqtime - FSK_RXDONE_FIXUP; // end of frame timestamp
             LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,FSK,rssi=%d,len=%d]: %h\r\n",
-                         LMIC.freq, 6, LMIC.rssi - RSSI_OFF, LMIC.dataLen, LMIC.frame, LMIC.dataLen);
+            debug_printf("RX[rssi=%d,len=%d]: %h\r\n",
+                         LMIC.rssi - RSSI_OFF, LMIC.dataLen, LMIC.frame, LMIC.dataLen);
 #endif
         } else if (irqflags1 & IRQ_FSK1_TIMEOUT_MASK) { // TIMEOUT
             BACKTRACE();
             // indicate timeout
             LMIC.dataLen = 0;
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,FSK]: TIMEOUT (%d us)\r\n", LMIC.freq, 6, osticks2us(irqtime - LMIC.rxtime));
+            debug_printf("RX: TIMEOUT (%d us)\r\n", osticks2us(irqtime - LMIC.rxtime));
 #endif
         } else if( irqflags2 & IRQ_FSK2_FIFOEMPTY_MASK ) { // FIFOEMPTY (TX)
             BACKTRACE();
@@ -1269,8 +1269,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             // read FIFO
             radio_readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,sf=%d,bw=%d,rssi=%d,snr=%.2F,len=%d]: %.80h\r\n",
-                         LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps),
+            debug_printf("RX[rssi=%d,snr=%.2F,len=%d]: %.80h\r\n",
                          LMIC.rssi - RSSI_OFF, (s4_t)(LMIC.snr * 100 / SNR_SCALEUP), 2,
                          LMIC.dataLen, LMIC.frame, LMIC.dataLen);
 #endif
@@ -1279,8 +1278,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             // indicate timeout
             LMIC.dataLen = 0;
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,sf=%d,bw=%d]: TIMEOUT (%d us)\r\n",
-                         LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps), osticks2us(irqtime - LMIC.rxtime));
+            debug_printf("RX: TIMEOUT (%d us)\r\n");
 #endif
         } else if (irqflags & IRQ_LORA_CDDONE_MASK) { // CDDONE
             BACKTRACE();

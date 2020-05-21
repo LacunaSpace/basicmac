@@ -824,15 +824,15 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             LMIC.rxtime  = irqtime - FSK_RXDONE_FIXUP; // end of frame timestamp
             LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,FSK,rssi=%d,len=%d]: %h\r\n",
-                         LMIC.freq, 6, LMIC.rssi - RSSI_OFF, LMIC.dataLen, LMIC.frame, LMIC.dataLen);
+            debug_printf("RX[rssi=%d,len=%d]: %h\r\n",
+                         LMIC.rssi - RSSI_OFF, LMIC.dataLen, LMIC.frame, LMIC.dataLen);
 #endif
         } else if (irqflags & IRQ_TIMEOUT) { // TIMEOUT
             BACKTRACE();
             // indicate timeout
             LMIC.dataLen = 0;
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,FSK]: TIMEOUT\r\n", LMIC.freq, 6);
+            debug_printf("RX: TIMEOUT\r\n");
 #endif
         } else {
             // unexpected irq
@@ -866,8 +866,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             }
             LMIC.rxtime0 = LMIC.rxtime - calcAirTime(LMIC.rps, LMIC.dataLen); // beginning of frame timestamp
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,sf=%d,bw=%d,rssi=%d,snr=%.2F,len=%d]: %h\r\n",
-                         LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps),
+            debug_printf("RX[rssi=%d,snr=%.2F,len=%d]: %h\r\n",
                          LMIC.rssi - RSSI_OFF, (s4_t)(LMIC.snr * 100 / SNR_SCALEUP), 2,
                          LMIC.dataLen, LMIC.frame, LMIC.dataLen);
 #endif
@@ -876,8 +875,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             // indicate timeout
             LMIC.dataLen = 0;
 #ifdef DEBUG_RX
-            debug_printf("RX[freq=%.1F,sf=%d,bw=%d]: TIMEOUT\r\n",
-                         LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps));
+            debug_printf("RX: TIMEOUT\r\n");
 #endif
         } else {
             // unexpected irq
