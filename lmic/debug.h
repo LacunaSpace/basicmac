@@ -11,6 +11,7 @@
 
 #define debug_snprintf(s,n,f,...)       do { } while (0)
 #define debug_printf(f,...)             do { } while (0)
+#define debug_printf_continue(f,...)             do { } while (0)
 #define debug_str(s)                    do { } while (0)
 #define debug_led(val)                  do { } while (0)
 #define debug_verbose_printf(f,...)             do { } while (0)
@@ -42,6 +43,8 @@ int debug_snprintf (char *str, int size, const char *format, ...);
 // write formatted string to USART
 void debug_printf_real (char const *format, ...);
 #define debug_printf(format, ...) debug_printf_real("%10t: " format, os_getTime(), ## __VA_ARGS__)
+// To continue a line, omit the timestamp
+#define debug_printf_continue(format, ...) debug_printf_real(format, ## __VA_ARGS__)
 
 // write nul-terminated string to USART
 void debug_str (const char* str);
@@ -51,8 +54,10 @@ void debug_led (int val);
 
 #ifndef CFG_DEBUG_VERBOSE
 #define debug_verbose_printf(f,...)             do { } while (0)
+#define debug_verbose_printf_continue(f,...)             do { } while (0)
 #else
 #define debug_verbose_printf debug_printf
+#define debug_verbose_printf_continue debug_printf_continue
 #endif
 
 #endif
