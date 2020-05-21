@@ -1182,7 +1182,7 @@ done:
     if (failed)
         debug_verbose_printf("Join failed\r\n");
     else
-        debug_verbose_printf("Scheduling next join at %t\r\n", LMIC.txend);
+        debug_verbose_printf("Scheduling next join at %t\r\n", os_getTime() + delay);
 
     // 1 - triggers EV_JOIN_FAILED event
     return (delay & ~1) | failed;
