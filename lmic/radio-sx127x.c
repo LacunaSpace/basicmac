@@ -410,13 +410,13 @@ static void configLoraModem (bool txcont) {
 #if defined(BRD_sx1276_radio)
     // set ModemConfig1 'bbbbccch' (bw=xxxx, cr=xxx, implicitheader=x)
     writeReg(LORARegModemConfig1,
-             ((getBw(LMIC.rps) + 7) << 4) | // BW125=0 --> 7
-             ((getCr(LMIC.rps) + 1) << 1) | // CR4_5=0 --> 1
+             ((getBw(LMIC.rps) - BW125 + 7) << 4) | // BW125 --> 7
+             ((getCr(LMIC.rps) - CR4_5 + 1) << 1) | // CR_4_5 --> 1
              (getIh(LMIC.rps) != 0));       // implicit header
 
     // set ModemConfig2 'sssstcmm' (sf=xxxx, txcont=x, rxpayloadcrc=x, symtimeoutmsb=00)
     writeReg(LORARegModemConfig2,
-             ((getSf(LMIC.rps)-1+7) << 4) |     // SF7=1 --> 7
+             ((getSf(LMIC.rps)-SF7+7) << 4) |   // SF7 --> 7
              (txcont ? 0x08 : 0x00)       |     // txcont: 0x08
              ((getNocrc(LMIC.rps) == 0) << 2)); // rxcrc
 
@@ -436,15 +436,15 @@ static void configLoraModem (bool txcont) {
 #elif defined(BRD_sx1272_radio)
     // set ModemConfig1 'bbccchco' (bw=xx, cr=xxx, implicitheader=x, rxpayloadcrc=x, lowdatarateoptimize=x)
     writeReg(LORARegModemConfig1,
-             (getBw(LMIC.rps) << 6) |           // BW125=0 --> 0
-             ((getCr(LMIC.rps) + 1) << 3) |     // CR4_5=0 --> 1
+             ((getBw(LMIC.rps) - BW125) << 6) |       // BW125 --> 0
+             ((getCr(LMIC.rps) - CR_4_5 + 1) << 3) |  // CR_4_5 --> 1
              ((getIh(LMIC.rps) != 0) << 2) |    // implicit header
              ((getNocrc(LMIC.rps) == 0) << 1) | // rxcrc
              enDro(LMIC.rps));                  // symtime >= 16ms
 
     // set ModemConfig2 'sssstamm' (sf=xxxx, txcont=x, agcauto=1 symtimeoutmsb=00)
     writeReg(LORARegModemConfig2,
-             ((getSf(LMIC.rps)-1+7) << 4) | // SF7=1 --> 7
+             ((getSf(LMIC.rps)-SF7+7) << 4) | // SF7 --> 7
              (txcont ? 0x08 : 0x00)       | // txcont: 0x08
              (1 << 2));                     // autoagc
 #endif // BRD_sx1272_radio

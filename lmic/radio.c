@@ -111,7 +111,7 @@ void os_radio (u1_t mode) {
             radio_stop();
 #ifdef DEBUG_TX
             debug_printf("TX[fcnt=%ld,freq=%.1F,sf=%d,bw=%d,pow=%d,len=%d%s]: %.80h\r\n",
-                         LMIC.seqnoUp - 1, LMIC.freq, 6, getSf(LMIC.rps) + 6, 125 << getBw(LMIC.rps),
+                         LMIC.seqnoUp - 1, LMIC.freq, 6, getSf(LMIC.rps) - SF7 + 7, 125 << getBw(LMIC.rps),
                          LMIC.txpow, LMIC.dataLen,
                          (LMIC.pendTxPort != 0 && (LMIC.frame[OFF_DAT_FCT] & FCT_ADRARQ)) ? ",ADRARQ" : "",
                          LMIC.frame, LMIC.dataLen);
@@ -128,7 +128,7 @@ void os_radio (u1_t mode) {
 #ifdef DEBUG_RX
             debug_printf("RX_MODE[freq=%.1F,sf=%d,bw=%s,rxtime=%.0F]\r\n",
                          LMIC.freq, 6,
-                         getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
+                         getSf(LMIC.rps) - SF7 + 7, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
                          LMIC.rxtime, 0);
 #endif
             // receive frame at rxtime/now (wait for completion interrupt)
@@ -143,7 +143,7 @@ void os_radio (u1_t mode) {
 #ifdef DEBUG_RX
             debug_printf("RXON_MODE[freq=%.1F,sf=%d,bw=%s]\r\n",
                          LMIC.freq, 6,
-                         getSf(LMIC.rps) + 6, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)));
+                         getSf(LMIC.rps) - SF7 + 7, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)));
 #endif
             // start scanning for frame now (wait for completion interrupt)
             state.txmode = 0;

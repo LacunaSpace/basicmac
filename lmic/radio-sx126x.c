@@ -376,9 +376,9 @@ static void SetRfFrequency (uint32_t freq) {
 // configure modulation parameters for LoRa
 static void SetModulationParamsLora (u2_t rps) {
     uint8_t param[4];
-    param[0] = getSf(rps) + 6; // SF (sf7=1)
-    param[1] = getBw(rps) + 4; // BW (bw125=0)
-    param[2] = getCr(rps) + 1; // CR (cr45=0)
+    param[0] = getSf(rps) - SF7 + 7;    // SF (sf7 -> 7)
+    param[1] = getBw(rps) - BW125 + 4;  // BW (bw125 -> 4)
+    param[2] = getCr(rps) - CR_4_5 + 1; // CR (cr45 -> 1)
     param[3] = enDro(rps);     // low-data-rate-opt (symbol time equal or above 16.38 ms)
     writecmd(CMD_SETMODULATIONPARAMS, param, 4);
 }
