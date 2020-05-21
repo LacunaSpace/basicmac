@@ -126,9 +126,9 @@ void os_radio (u1_t mode) {
         case RADIO_RX:
             radio_stop();
 #ifdef DEBUG_RX
-            debug_printf("RX_MODE[freq=%.1F,sf=%d,bw=%s,rxtime=%.0F]\r\n",
+            debug_printf("RX_MODE[freq=%.1F,sf=%d,bw=%d,rxtime=%.0F]\r\n",
                          LMIC.freq, 6,
-                         getSf(LMIC.rps) - SF7 + 7, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)),
+                         getSf(LMIC.rps) - SF7 + 7, 125 << (getBw(LMIC.rps) - BW125),
                          LMIC.rxtime, 0);
 #endif
             // receive frame at rxtime/now (wait for completion interrupt)
@@ -141,9 +141,9 @@ void os_radio (u1_t mode) {
         case RADIO_RXON:
             radio_stop();
 #ifdef DEBUG_RX
-            debug_printf("RXON_MODE[freq=%.1F,sf=%d,bw=%s]\r\n",
+            debug_printf("RXON_MODE[freq=%.1F,sf=%d,bw=%d]\r\n",
                          LMIC.freq, 6,
-                         getSf(LMIC.rps) - SF7 + 7, ("125\0" "250\0" "500\0" "rfu") + (4 * getBw(LMIC.rps)));
+                         getSf(LMIC.rps) - SF7 + 7, 125 << (getBw(LMIC.rps) - BW125),
 #endif
             // start scanning for frame now (wait for completion interrupt)
             state.txmode = 0;
