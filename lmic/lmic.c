@@ -441,6 +441,8 @@ static void setAvail (avail_t* pavail, osxtime_t t) {
 }
 
 static dr_t lowerDR (dr_t dr, u1_t n) {
+    if (dr == CUSTOM_DR)
+        return dr;
     return dr <= n ? 0 : dr-n;
 }
 
@@ -459,6 +461,8 @@ static inline bit_t validDR (dr_t dr) {
 }
 
 static rps_t updr2rps (dr_t dr) {
+    if (dr == CUSTOM_DR)
+        return LMIC.custom_rps;
     return REGION.dr2rps[dr];
 }
 
@@ -810,6 +814,8 @@ static freq_t rdFreq (u1_t* p) {
 
 // Shard between REG_DYN/REG_FIX
 static dr_t prepareDnDr (dr_t updr) {
+    ASSERT(updr != CUSTOM_DR);
+
     s1_t dndr = (s1_t) updr + REGION.rx1DrOff[LMIC.dn1DrOffIdx];
     dr_t dr8 = REGION.dr2rps[8];
     s1_t mindr = (dr8 != ILLEGAL_RPS && getNocrc(dr8)) ? 8 : 0;
@@ -1734,10 +1740,14 @@ static bit_t decodeFrame (void) {
             debug_printf("ADR: p1=%02x,dr=%d,powadj=%d,chmap=%04x,chpage=%d,nbtrans=%d\r\n",
                     p1, dr, powadj, chmap, chpage, nbtrans);
 #endif
-            if( dr == 15 ) {
+            if( LMIC.datarate == CUSTOM_DR ) {
+                // Reject modifying a custom DR. The network probably
+                // does not really know how to handle this, but at least
+                // they know we did not change the DR.
+                ans &= ~MCMD_LADR_ANS_DRACK;
+            } else if( dr == 15 ) {
                 dr = LMIC.datarate; // Do not change DR
-            }
-            if( !validDR(dr) || ( REG_IS_FIX()
+            } else if( !validDR(dr) || ( REG_IS_FIX()
 #ifdef REG_FIX
                         && !checkChannel_fix(dmap, dr)
 #endif
@@ -1784,7 +1794,7 @@ static bit_t decodeFrame (void) {
             freq_t freq = rdFreq(&opts[oidx+2]);
             oidx += 5;
             u1_t ans = 0;
-            if( validDR(dr) )  //XXX:BUG validDNDR
+            if( validDR(dr) && LMIC.dn2Dr != CUSTOM_DR)  //XXX:BUG validDNDR
                 ans |= MCMD_DN2P_ANS_DRACK;
             if( freq > 0 )
                 ans |= MCMD_DN2P_ANS_CHACK;
@@ -2518,7 +2528,9 @@ static void buildDataFrame (void) {
         end = OFF_DAT_OPTS;
     }
 
-    int flen, flen_max = LMIC_maxAppPayload() + 13;
+    int flen, flen_max = MAX_LEN_FRAME;
+    if (LMIC.datarate != CUSTOM_DR)
+        flen_max = LMIC_maxAppPayload() + 13;
 again:
     flen = end + (txdata ? 5+dlen : 4);
     if( flen > flen_max ) {
@@ -3097,9 +3109,14 @@ static void engineUpdate (void) {
                 }
                 LMIC.osjob.func = FUNC_ADDR(updataDone);
             }
-            LMIC.rps    = setCr(updr2rps(txdr), LMIC.errcr);
-            // Calculate dndr to use based on txdr (can be != LMIC.datarate for joins)
-            LMIC.dndr = prepareDnDr(txdr);
+            LMIC.rps    = updr2rps(txdr);
+            // For CUSTOM_DR, assume that rps already has the right CR
+            // and that dndr is also preset to the right DR.
+            if (txdr != CUSTOM_DR) {
+                LMIC.rps    = setCr(LMIC.rps, LMIC.errcr);
+                // Calculate dndr to use based on txdr (can be != LMIC.datarate for joins)
+                LMIC.dndr = prepareDnDr(txdr);
+            }
             LMIC.opmode = (LMIC.opmode & ~(OP_POLL|OP_RNDTX)) | OP_TXRXPEND | OP_NEXTCHNL;
             updateTx(txbeg);
             reportEvent(EV_TXSTART);
@@ -3173,10 +3190,21 @@ void LMIC_setAdrMode (bit_t enabled) {
 
 //  Should we have/need an ext. API like this?
 void LMIC_setDrTxpow (dr_t dr, s1_t txpowadj) {
+    ASSERT(dr != CUSTOM_DR); // Use setCustomDr() for that
     setDrTxpow(DRCHG_SET, dr, txpowadj);
     syncDatarate();
+    // Make sure dndr is not CUSTOM_DR anymore (actual value does not
+    // matter, it will be set later *if* not CUSTOM_DR).
+    LMIC.dndr = dr;
 }
 
+dr_t LMIC_setCustomDr (rps_t custom_rps, dr_t dndr) {
+    dr_t old_dr = LMIC.datarate;
+    setDrTxpow(DRCHG_SET, CUSTOM_DR, KEEP_TXPOWADJ);
+    LMIC.dndr = dndr;
+    LMIC.custom_rps = custom_rps;
+    return old_dr;
+}
 
 void LMIC_shutdown (void) {
     os_clearCallback(&LMIC.osjob);

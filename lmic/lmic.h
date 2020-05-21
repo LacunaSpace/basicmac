@@ -296,6 +296,7 @@ struct lmic_t {
     s1_t        rssi;
     s1_t        snr;
     rps_t       rps;
+    rps_t       custom_rps; // Used for CUSTOM_DR
     u1_t        rxsyms;
     u1_t        dndr;
     s1_t        txpow;     // dBm -- needs to be combined with brdTxPowOff
@@ -451,6 +452,68 @@ DECLARE_LMIC; //!< \internal
 bit_t LMIC_setupChannel (u1_t channel, freq_t freq, u2_t drmap);
 void  LMIC_disableChannel (u1_t channel);
 
+// Use a custom datrate and rps value.
+//
+// This causes the uplink to use the radio settings described by the
+// given rps value, which can be any valid rps setting (even when the
+// region does not normally enable it). The rps setting is used
+// unmodified for uplink, and will have nocrc set for downlink.
+//
+// While the custom datarate is active, it will not be modified
+// automatically (e.g. LinkADRReq is rejected and lowring DR for ADR is
+// suspended), except when it is not enabled for any channel (in dynamic
+// regions).
+//
+// However, if you call this function again to change the rps value for
+// RX1 or RX2 (see below), it will also apply to subsequent uplinks, so
+// you might need to set a new rps or standard datarate before the next
+// uplink.
+//
+// This returns the old uplink DR, which can be later be passed to
+// LMIC_setDrTxpow() to disable the custom datarate again, if needed.
+//
+// RX1
+//
+// Normally, the RX1 datarate is derived from the uplink datarate. When
+// using a custom datarate, it must be set explicitly using the dndr
+// parameter to this function. This can be either a standard datarate
+// value, or CUSTOM_DR to use the same custom rps value as the uplink.
+//
+// To use a custom rps for RX1 that is different from the uplink (or
+// use a custom rps just for RX1), call this function (again) after the
+// EV_TXSTART event (but before EV_TXDONE).
+//
+//
+// RX2
+//
+// To also use a custom datarate for the RX2 window, call this function
+// and set `LMIC.dn2Dr` to CUSTOM_DR. This also causes RXParamSetupReq
+// to be rejected, keeping dn2Dr unmodified.
+//
+// To use a custom rps for RX2 that is different from the uplink and/or
+// RX1 (or use a custom rps just for RX2), call this function (again)
+// after the EV_TXDONE event (but before RX2 starts).
+//
+//
+// Channel selection as normal
+//
+// For fixed regions, any enabled (125kHz) channel will be used.
+//
+// For dynamic regions, any channel that supports CUSTOM_DR will be
+// considered. LMIC_setupChannel() can be used normally, to create one
+// or more channels enabled for CUSTOM_DR. Since the network can
+// potentially disable or reconfigure channels, it is recommended to set
+// up these channels again before every transmission.
+//
+// Disabling CUSTOM_DR
+//
+// To revert uplink and RX1 back to a normal datarate and allow ADR to
+// work again (if enabled), call LMIC_setDrTxpow as normal, passing the
+// DR to use.
+//
+// To revert RX2 back to a normal datarate, just set LMIC.dn2Dr to the
+// appropriate datarate directly.
+dr_t  LMIC_setCustomDr  (rps_t custom_rps, dr_t dndr);
 void  LMIC_setDrTxpow   (dr_t dr, s1_t txpow);  // set default/start DR/txpow
 void  LMIC_setAdrMode   (bit_t enabled);        // set ADR mode (if mobile turn off)
 bit_t LMIC_startJoining (void);

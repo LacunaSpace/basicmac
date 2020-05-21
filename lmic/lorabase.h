@@ -27,6 +27,11 @@ typedef s1_t eirp_t;
 enum { ILLEGAL_DR  = 0xFF };
 enum { ILLEGAL_RPS = 0xFF };
 enum { ILLEGAL_MAS = 0x00 };
+// DR 15 is used in the LinkADRReq to indicate "no DR changes", so it
+// will never be allocated as a standard DR. So it is used here for a
+// custom DR. By using 15, rather than 0xFF or similar, it can be used
+// in per-channel drmap as normal.
+enum { CUSTOM_DR = 0xF };
 
 // Global maximum frame length
 enum { BCN_PREAMBLE_LEN  = 10 };  // length in symbols - actual time depends on DR
