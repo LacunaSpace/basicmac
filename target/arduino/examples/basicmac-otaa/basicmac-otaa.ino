@@ -159,7 +159,7 @@ void onLmicEvent (ev_t ev) {
             Serial.println(F("EV_SCAN_FOUND"));
             break;
         case EV_TXSTART:
-            Serial.println(F("EV_TXSTART,"));
+            Serial.println(F("EV_TXSTART"));
             break;
         case EV_TXDONE:
             Serial.println(F("EV_TXDONE"));
