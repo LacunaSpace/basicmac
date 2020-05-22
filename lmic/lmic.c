@@ -2385,7 +2385,6 @@ static void txError (void) {
 
 static void updataDone (osjob_t* osjob) {
     (void)osjob; // unused
-    reportEvent(EV_TXDONE);
     // check if rx window is to be scheduled
     // (dataLen is reset by radio if tx didn't complete regularly and txend is unknown)
     if( LMIC.pendTxNoRx || LMIC.dataLen == 0 ) {
@@ -2398,6 +2397,7 @@ static void updataDone (osjob_t* osjob) {
                ? FUNC_ADDR(setupRx1DnData)
                : FUNC_ADDR(setupRx1ClassC));
     }
+    reportEvent(EV_TXDONE);
 }
 
 // ========================================
