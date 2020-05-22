@@ -58,6 +58,9 @@ u1_t os_getRegion (void) { return REGCODE_EU868; }
 // cycle limitations).
 const unsigned TX_INTERVAL = 60000;
 
+// Timestamp of last packet sent
+uint32_t last_packet = 0;
+
 // When this is defined, a standard pinmap from standard-pinmaps.ino
 // will be used.  If you need to use a custom pinmap, comment this line
 // and enter the pin numbers in the lmic_pins variable below.
@@ -201,11 +204,17 @@ void setup() {
     // error, a lower value will likely be more appropriate.
     //LMIC_setClockError(MAX_CLOCK_ERROR * 10 / 100);
 
-    // Queue first packet (sending automatically starts OTAA too)
-    send_packet();
-}
+    // Start join
+    LMIC_startJoining();
 
-uint32_t last_packet = 0;
+    // Make sure the first packet is scheduled ASAP after join completes
+    last_packet = millis() - TX_INTERVAL;
+
+    // Optionally wait for join to complete (uncomment this is you want
+    // to run the loop while joining).
+    while ((LMIC.opmode & (OP_JOINING)))
+        os_runstep();
+}
 
 void loop() {
     // Let LMIC handle background tasks
