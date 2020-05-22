@@ -34,6 +34,9 @@
 // CFG_DEBUG)
 #define DEBUG_TX
 #define DEBUG_RX
+// Define these to add some job scheduling specific debug output (needs
+// CFG_DEBUG_VERBOSE)
+//#define DEBUG_JOBS
 // Uncomment to display timestamps in ticks rather than milliseconds
 //#define CFG_DEBUG_RAW_TIMESTAMPS
 

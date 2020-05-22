@@ -115,7 +115,9 @@ void os_setExtendedTimedCallback (osxjob_t* xjob, osxtime_t xtime, osjobcb_t cb)
     xjob->deadline = xtime;
     extendedjobcb(xjob);
     hal_enableIRQs();
+#ifdef DEBUG_JOBS
     debug_verbose_printf("Scheduled job %u, cb %u at %t\r\n", (unsigned)xjob, (unsigned)cb, xtime);
+#endif // DEBUG_JOBS
 }
 
 // clear scheduled job, return 1 if job was removed
@@ -123,8 +125,10 @@ int os_clearCallback (osjob_t* job) {
     hal_disableIRQs();
     int r = unlinkjob(&OS.scheduledjobs, job);
     hal_enableIRQs();
+#ifdef DEBUG_JOBS
     if (r)
         debug_verbose_printf("Cleared job %u\r\n", (unsigned)job);
+#endif // DEBUG_JOBS
     return r;
 }
 
@@ -158,10 +162,12 @@ void os_setTimedCallbackEx (osjob_t* job, ostime_t time, osjobcb_t cb, unsigned 
     }
     *pnext = job;
     hal_enableIRQs();
+#ifdef DEBUG_JOBS
     if (flags & OSJOB_FLAG_NOW)
         debug_verbose_printf("Scheduled job %u, cb %u ASAP\r\n", (unsigned)job, (unsigned)cb);
     else
         debug_verbose_printf("Scheduled job %u, cb %u%s at %s%t\r\n", (unsigned)job, (unsigned)cb, flags & OSJOB_FLAG_IRQDISABLED ? " (irq disabled)" : "", flags & OSJOB_FLAG_APPROX ? "approx " : "", time);
+#endif // DEBUG_JOBS
 }
 
 // execute 1 job from timer or run queue, or sleep if nothing is pending
@@ -196,7 +202,9 @@ void os_runstep (void) {
         // Only print when interrupts are enabled, some Arduino cores do
         // not handle printing with IRQs disabled
         if( (j->flags & OSJOB_FLAG_IRQDISABLED) == 0) {
+#ifdef DEBUG_JOBS
             debug_verbose_printf("Running job %u, cb %u, deadline %t\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline);
+#endif // DEBUG_JOBS
 #ifdef CFG_warnjobs
             if ( delta > 1 ) {
                 debug_printf("WARNING: job 0x%08x (func 0x%08x) executed %d ticks late\r\n", j, j->func, delta);
@@ -208,7 +216,9 @@ void os_runstep (void) {
         hal_watchcount(0);
         // If we could not print before, at least print after
         if( (j->flags & OSJOB_FLAG_IRQDISABLED) != 0) {
+#ifdef DEBUG_JOBS
             debug_verbose_printf("Ran job %u, cb %u, deadline %F\r\n", (unsigned)j, (unsigned)j->func, (ostime_t)j->deadline, 0);
+#endif // DEBUG_JOBS
 #ifdef CFG_warnjobs
             if ( delta > 1 ) {
                 debug_printf("WARNING: job 0x%08x (func 0x%08x) executed %d ticks late\r\n", j, j->func, delta);
