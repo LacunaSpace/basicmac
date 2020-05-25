@@ -452,6 +452,18 @@ DECLARE_LMIC; //!< \internal
 bit_t LMIC_setupChannel (u1_t channel, freq_t freq, u2_t drmap);
 void  LMIC_disableChannel (u1_t channel);
 
+// Manually select the next channel for the next transmission.
+//
+// Warning: This does not do any checking. In particular, this bypasses
+// duty cycle limits, allows selecting a channel that is not configured
+// for the current datarate, and breaks when you select an invalid or
+// disabled channel.
+//
+// The selected channel applies only to the next transmission. Call this
+// *after* setting the datarate (if needed) with LMIC_setDrTxpow(),
+// since that forces a new channel to be selected automatically.
+void LMIC_selectChannel(u1_t channel);
+
 // Use a custom datrate and rps value.
 //
 // This causes the uplink to use the radio settings described by the

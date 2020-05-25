@@ -3206,6 +3206,13 @@ dr_t LMIC_setCustomDr (rps_t custom_rps, dr_t dndr) {
     return old_dr;
 }
 
+void LMIC_selectChannel(u1_t channel) {
+    LMIC.opmode &= ~OP_NEXTCHNL;
+    LMIC.txChnl = channel;
+    LMIC.txend = os_getTime();
+}
+
+
 void LMIC_shutdown (void) {
     os_clearCallback(&LMIC.osjob);
     os_radio(RADIO_STOP);
