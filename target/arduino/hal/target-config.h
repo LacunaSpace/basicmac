@@ -30,9 +30,10 @@
 //#define CFG_DEBUG_VERBOSE
 // Debug output (and assertion failures) are printed to this Stream
 #define CFG_DEBUG_STREAM Serial
-// Define these to add some TX or RX specific debug output
-//#define DEBUG_TX
-//#define DEBUG_RX
+// Define these to add some TX or RX specific debug output (needs
+// CFG_DEBUG)
+#define DEBUG_TX
+#define DEBUG_RX
 // Uncomment to display timestamps in ticks rather than milliseconds
 //#define CFG_DEBUG_RAW_TIMESTAMPS
 
