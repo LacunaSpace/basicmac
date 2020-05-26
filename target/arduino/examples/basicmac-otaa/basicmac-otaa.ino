@@ -193,7 +193,10 @@ void setup() {
     unsigned long start = millis();
     while (millis() - start < 5000 && !Serial);
 
+    Serial.println();
+    Serial.println();
     Serial.println(F("Starting"));
+    Serial.println();
 
     // LMIC init
     os_init(nullptr);
