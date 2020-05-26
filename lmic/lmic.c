@@ -1013,7 +1013,7 @@ static u1_t selectRandomChnl (u2_t map, u1_t nbits) {
 // will block while doing LBT
 static ostime_t nextTx_dyn (ostime_t now) {
     drmap_t drbit = 1 << LMIC.datarate;
-    osxtime_t xnow = os_getXTime();
+    osxtime_t xnow = os_time2XTime(now, os_getXTime());
     osxtime_t txavail = OSXTIME_MAX;
     u1_t cccnt = 0; // number of candidate channels
     u2_t ccmap = 0; // candidate channel mask
@@ -3039,7 +3039,7 @@ static void engineUpdate (void) {
             debug_verbose_printf("Uplink data pending\r\n", os_getTime());
         // Find next suitable channel and return availability time
         if( (LMIC.opmode & OP_NEXTCHNL) != 0 ) {
-            txbeg = LMIC.txend = nextTx(now);
+            txbeg = LMIC.txend = nextTx(now+TX_RAMPUP);
             debug_verbose_printf("Airtime available at %t (channel duty limit)\r\n", txbeg);
         } else {
             txbeg = LMIC.txend;
