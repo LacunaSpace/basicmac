@@ -529,7 +529,7 @@ static uint32_t GetRandom (void) {
     // wait 1ms
     hal_waitUntil(os_getTime() + ms2osticks(1));
     // read random register
-    ReadRegs(REG_RANDOMNUMBERGEN0, (uint8_t*)value, 4);
+    ReadRegs(REG_RANDOMNUMBERGEN0, (uint8_t*)&value, sizeof(value));
     // standby
     SetStandby(STDBY_RC);
     return value;
