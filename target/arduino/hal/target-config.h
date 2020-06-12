@@ -45,8 +45,7 @@
 // instead, though.
 //#define LMIC_PRINTF_FO
 
-// Uncomment this to disable all code related to beacon tracking.
-// Requires ping to be disabled too
+// Remove/comment this to enable code related to beacon tracking.
 #define DISABLE_CLASSB
 
 // This allows choosing between multiple included AES implementations.
