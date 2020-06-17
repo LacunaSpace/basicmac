@@ -543,10 +543,15 @@ void radio_sleep (void) {
     }
 }
 
-static void txlora (void) {
+// Do config common to all RF modes
+static void CommonSetup (void) {
     SetRegulatorMode(REGMODE_DCDC);
     SetDIO2AsRfSwitchCtrl(1);
     SetDIO3AsTcxoCtrl();
+}
+
+static void txlora (void) {
+    CommonSetup();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_LORA);
     SetRfFrequency(LMIC.freq);
@@ -570,9 +575,7 @@ static void txlora (void) {
 }
 
 static void txfsk (void) {
-    SetRegulatorMode(REGMODE_DCDC);
-    SetDIO2AsRfSwitchCtrl(1);
-    SetDIO3AsTcxoCtrl();
+    CommonSetup();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_FSK);
     SetRfFrequency(LMIC.freq);
@@ -598,9 +601,7 @@ static void txfsk (void) {
 }
 
 void radio_cw (void) {
-    SetRegulatorMode(REGMODE_DCDC);
-    SetDIO2AsRfSwitchCtrl(1);
-    SetDIO3AsTcxoCtrl();
+    CommonSetup();
     SetStandby(STDBY_RC);
     SetRfFrequency(LMIC.freq);
     SetTxPower(LMIC.txpow + LMIC.brdTxPowOff);
@@ -636,9 +637,7 @@ void radio_starttx (bool txcontinuous) {
 static void rxfsk (bool rxcontinuous) {
     // configure radio (needs rampup time)
     ostime_t t0 = os_getTime();
-    SetRegulatorMode(REGMODE_DCDC);
-    SetDIO2AsRfSwitchCtrl(1);
-    SetDIO3AsTcxoCtrl();
+    CommonSetup();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_FSK);
     SetRfFrequency(LMIC.freq);
@@ -687,9 +686,7 @@ static void rxfsk (bool rxcontinuous) {
 static void rxlora (bool rxcontinuous) {
     // configure radio (needs rampup time)
     ostime_t t0 = os_getTime();
-    SetRegulatorMode(REGMODE_DCDC);
-    SetDIO2AsRfSwitchCtrl(1);
-    SetDIO3AsTcxoCtrl();
+    CommonSetup();
     SetStandby(STDBY_RC);
     SetPacketType(PACKET_TYPE_LORA);
     SetRfFrequency(LMIC.freq);
