@@ -411,7 +411,7 @@ static void configLoraModem (bool txcont) {
     // set ModemConfig1 'bbbbccch' (bw=xxxx, cr=xxx, implicitheader=x)
     writeReg(LORARegModemConfig1,
              ((getBw(LMIC.rps) - BW125 + 7) << 4) | // BW125 --> 7
-             ((getCr(LMIC.rps) - CR4_5 + 1) << 1) | // CR_4_5 --> 1
+             ((getCr(LMIC.rps) - CR_4_5 + 1) << 1) | // CR_4_5 --> 1
              (getIh(LMIC.rps) != 0));       // implicit header
 
     // set ModemConfig2 'sssstcmm' (sf=xxxx, txcont=x, rxpayloadcrc=x, symtimeoutmsb=00)
