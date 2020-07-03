@@ -10,7 +10,20 @@
 
 #if defined(USE_STANDARD_PINMAP)
 
-#if defined(ARDUINO_AVR_MINI)
+#if defined(BASICMAC_DUMMY_PINMAP)
+// Dummy minimal pinmap, just used for CI compile-testing.
+const lmic_pinmap lmic_pins = {
+    .nss = 10,
+    // RX/TX is controlled through RXTX by the SX1272 directly on the RFM95W
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    // RST is hardwarid to MCU reset
+    .rst = LMIC_UNUSED_PIN,
+    .dio = {1, 2, 3},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#elif defined(ARDUINO_AVR_MINI)
 #if !defined(BRD_sx1276_radio)
 #error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
 #endif
