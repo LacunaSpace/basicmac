@@ -18,7 +18,7 @@ void debug_str (const char* str) {
     hal_debug_str(str);
 }
 
-static int itoa (char* buf, u4_t val, int base, int mindigits, int exp, int prec, char sign) {
+static int debug_itoa (char* buf, u4_t val, int base, int mindigits, int exp, int prec, char sign) {
     char num[33], *p = num, *b = buf;
     if (sign) {
         if ((s4_t) val < 0) {
@@ -157,11 +157,11 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
                 numeric: {
                         char num[33], pad = ' ';
                         if (zero && left == 0 && prec == 0) {
-                            prec = width - 1; // have itoa() do the leading zero-padding for correct placement of sign
+                            prec = width - 1; // have debug_itoa() do the leading zero-padding for correct placement of sign
                             pad = '0';
                         }
                         u4_t val = longint ? va_arg(arg, long) : va_arg(arg, int);
-                        int len = itoa(num, val, base, prec, 0, 0, sign);
+                        int len = debug_itoa(num, val, base, prec, 0, 0, sign);
                         dst += strpad(dst, end - dst, num, len, width, left, pad);
                         break;
                     }
@@ -169,7 +169,7 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
                     char num[33], pad = (zero && left == 0) ? '0' : ' ';
                     u4_t val = va_arg(arg, u4_t);
                     int exp = va_arg(arg, int);
-                    int len = itoa(num, val, 10, exp + 2, exp, (prec) ? prec : exp, (plus) ? '+' : (space) ? ' ' : '-');
+                    int len = debug_itoa(num, val, 10, exp + 2, exp, (prec) ? prec : exp, (plus) ? '+' : (space) ? ' ' : '-');
                     dst += strpad(dst, end - dst, num, len, width, left, pad);
                     break;
                 }
@@ -183,7 +183,7 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
                     char buf[23], *p = buf;
                     unsigned char *eui = va_arg(arg, unsigned char *);
                     for (int i = 7; i >= 0; i--) {
-                        p += itoa(p, eui[i], 16, 2, 0, 0, 0);
+                        p += debug_itoa(p, eui[i], 16, 2, 0, 0, 0);
                         if (i) *p++ = '-';
                     }
                     dst += strpad(dst, end - dst, buf, 23, width, left, ' ');
@@ -210,17 +210,17 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
                     t /= 24;
                     int day = t;
                     if (c == 'T') {
-                        p += itoa(p, day, 10, 3, 0, 0, 0);
+                        p += debug_itoa(p, day, 10, 3, 0, 0, 0);
                         *p++ = '.';
                     }
-                    p += itoa(p, hr, 10, 2, 0, 0, 0);
+                    p += debug_itoa(p, hr, 10, 2, 0, 0, 0);
                     *p++ = ':';
-                    p += itoa(p, min, 10, 2, 0, 0, 0);
+                    p += debug_itoa(p, min, 10, 2, 0, 0, 0);
                     *p++ = ':';
-                    p += itoa(p, sec, 10, 2, 0, 0, 0);
+                    p += debug_itoa(p, sec, 10, 2, 0, 0, 0);
                     if (c == 't') {
                         *p++ = '.';
-                        p += itoa(p, ms, 10, 3, 0, 0, 0);
+                        p += debug_itoa(p, ms, 10, 3, 0, 0, 0);
                     }
                     dst += strpad(dst, end - dst, buf, 12, width, left, ' ');
                     break;
@@ -231,7 +231,7 @@ static int debug_vsnprintf(char *str, int size, const char *format, va_list arg)
                     char *top = (prec == 0 || dst + prec > end) ? end : dst + prec;
                     while (len--) {
                         if ((len == 0 && top - dst >= 2) || top - dst >= 2 + space + 2) {
-                            dst += itoa(dst, *buf++, 16, 2, 0, 0, 0);
+                            dst += debug_itoa(dst, *buf++, 16, 2, 0, 0, 0);
                             if(space && len && dst < top) *dst++ = ' ';
                         } else {
                             while (dst < top) *dst++ = '.';
