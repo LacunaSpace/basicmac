@@ -415,7 +415,7 @@ static void adjAvail (avail_t* pavail, osxtime_t base) {
 
 static void setAvail (avail_t* pavail, osxtime_t t) {
     osxtime_t base = LMIC.baseAvail;
-    int v;
+    u4_t v;
     if( base > t ) {
         t = base; // make sure t is not in the past
     }
@@ -805,7 +805,7 @@ u1_t LMIC_setPingable (u1_t intvExp) {
 
 
 static freq_t rdFreq (u1_t* p) {
-    freq_t freq = ((p[2] << 16) | (p[1] << 8) | p[0]) * 100;
+    freq_t freq = (((freq_t)p[2] << 16) | ((freq_t)p[1] << 8) | (freq_t)p[0]) * 100;
     if( freq != 0 && (freq < REGION.minFreq || freq > REGION.maxFreq) )
         return -1;
     return freq;

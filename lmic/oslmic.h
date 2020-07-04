@@ -196,7 +196,7 @@ typedef s4_t  ostime_t;
 typedef s8_t  osxtime_t;
 
 #define OSXTIME_MAX     INT64_MAX
-#define OSTIME_MAX_DIFF ((1U << 31) - 1)
+#define OSTIME_MAX_DIFF INT32_MAX
 
 #if !HAS_ostick_conv
 #define us2osticks(us)   ((ostime_t)( ((s8_t)(us) * OSTICKS_PER_SEC) / 1000000))
