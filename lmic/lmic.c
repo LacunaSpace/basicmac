@@ -381,6 +381,8 @@ static const region_t REGIONS[REGIONS_COUNT] = {
 #endif
 };
 
+// Workaround for Lacuna LS200 core defining this on the gcc commandline
+#undef REGION
 #define REGION          (*LMIC.region)
 #define isREGION(reg)   (&REGION == &REGIONS[REGION_##reg])
 
