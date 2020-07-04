@@ -514,6 +514,7 @@ static void setRadioConsumption_ua (bool boost, u1_t pow) {
         ua = RFOPOW[pow];
     }
 #else
+    (void)boost; (void)pow; // unused
     ua = 120000; // something better than nothing?
 #endif
     LMIC.radioPwr_ua = ua;
@@ -1159,6 +1160,8 @@ void radio_init (bool calibrate) {
 
 // (run by irqjob)
 bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
+    (void)diomask; //unused
+
     // dispatch modem
     if (isFsk(LMIC.rps)) { // FSK modem
         u1_t irqflags1 = readReg(FSKRegIrqFlags1);

@@ -1264,8 +1264,9 @@ static u1_t enableAllChannels_fix (void) {
         }
     }
     if (nch & 0xf) {
-        if (LMIC.fix.channelMap[nch >> 4] != (1 << (nch & 0xf)) - 1) {
-            LMIC.fix.channelMap[nch >> 4]  = (1 << (nch & 0xf)) - 1;
+        u1_t newval = (1 << (nch & 0xf)) - 1;
+        if (LMIC.fix.channelMap[nch >> 4] != newval) {
+            LMIC.fix.channelMap[nch >> 4]  = newval;
             rv = 1;
         }
     }
@@ -1355,7 +1356,7 @@ static u1_t applyChannelMap_fix (u1_t chpage, u2_t chmap, u2_t* dest) {
             return 0;
         }
         if ((nch & 15) && chpage == (REGION.numChBlocks >> 1)) { // partial map in last 16bit word
-            chmap &= ~(~0 << (nch & 15));
+            chmap &= ~(0xffff << (nch & 15));
         }
         dest[chpage] = chmap;
     }
@@ -3436,6 +3437,7 @@ void LMIC_setLinkCheck (u4_t limit, u4_t delay) {
 
 bit_t LMIC_setupChannel (u1_t chidx, freq_t freq, u2_t drmap) {
     if (REG_IS_FIX()) {
+        (void)chidx; (void)freq; (void)drmap; // unused
         return 0;
     } else {
 #ifdef REG_DYN
