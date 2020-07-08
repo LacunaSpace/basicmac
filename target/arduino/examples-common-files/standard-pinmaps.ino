@@ -87,6 +87,22 @@ const lmic_pinmap lmic_pins = {
     // TCXO is controlled through DIO3 by the SX1262 directly
     .tcxo = LMIC_UNUSED_PIN,
 };
+#elif defined(ARDUINO_TTGO_LoRa32_V1)
+#if !defined(BRD_sx1276_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// Assume this is a Nexus board
+const lmic_pinmap lmic_pins = {
+    .nss = 18,
+    // RX/TX is controlled through RXTX by the SX1272 directly on the RFM95W
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    // RST is hardwarid to MCU reset
+    .rst = 14,
+    .dio = {26, 33, 32},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
+};
 #else
 #error "Unknown board, no standard pimap available. Define your own in the main sketch file."
 #endif
