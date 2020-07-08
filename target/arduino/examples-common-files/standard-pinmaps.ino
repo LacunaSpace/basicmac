@@ -94,6 +94,22 @@ const lmic_pinmap lmic_pins = {
     // DIO3 connected to TCXO on E22 board
     .tcxo = LMIC_CONTROLLED_BY_DIO3,
 };
+#elif defined(ARDUINO_TTGO_LoRa32_V1)
+#if !defined(BRD_sx1276_radio)
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+// https://github.com/LilyGO/TTGO-LORA32/tree/LilyGO-868-V1.0
+// Pinout: https://github.com/LilyGO/TTGO-LORA32/blob/LilyGO-868-V1.0/images/image1.jpg
+const lmic_pinmap lmic_pins = {
+    .nss = 18,
+    // RX/TX is controlled through RXTX by the SX1272 directly on the RFM95W
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    .rst = 14,
+    .dio = {26, 33, 32},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
+};
 #else
 #error "Unknown board, no standard pimap available. Define your own in the main sketch file."
 #endif
