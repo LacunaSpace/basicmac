@@ -1,0 +1,78 @@
+name: Compile Arduino examples
+on: [push, pull_request]
+jobs:
+  build:
+    name: ${{ matrix.board }} / ${{ matrix.region }} / ${{ matrix.transceiver }}
+    runs-on: ubuntu-latest
+    env:
+      PLATFORM_DEFAULT_URL: https://arduino.esp8266.com/stable/package_esp8266com_index.json,https://github.com/stm32duino/BoardManagerFiles/raw/master/STM32/package_stm_index.json,https://lacunaspace.github.io/arduino-STM32L4-Lacuna/package_STM32L4_Lacuna_boards_index.json
+    strategy:
+      matrix:
+        board:
+          - arduino:avr:mega
+          - arduino:samd:arduino_zero_edbg
+          - esp8266:esp8266:generic
+          - lacunaspace:stm32l4:Lacuna-LS200
+            # Just a random STM32 board
+          - STM32:stm32:Nucleo_64:pnum=NUCLEO_F401RE
+        region:
+          - CFG_eu868
+          - CFG_us915
+        transceiver:
+          - BRD_sx1272_radio
+          - BRD_sx1276_radio
+          - BRD_sx1262_radio
+        include:
+          # Older compilers (used by STM32 and ESP) seem to get confused
+          # by the REGION initializers and produce (seemingly unfixable)
+          # missing-field-initializers warnings. So just ignore these
+          # for these boards.
+          - board: esp8266:esp8266:generic
+            extra_flags: -Wno-error=missing-field-initializers
+          # The STM32 cores have unused-parameter warnings in the core,
+          # so these (this also ignores the same warnings in the sketch
+          # and library, which is not ideal, but this seems to be the
+          # only way to fix this).
+          - board: lacunaspace:stm32l4:Lacuna-LS200
+            extra_flags: -Wno-error=unused-parameter -Wno-error=missing-field-initializers
+          - board: STM32:stm32:Nucleo_64:pnum=NUCLEO_F401RE
+            extra_flags: -Wno-error=unused-parameter -Wno-error=missing-field-initializers
+
+      # Run the entire matrix, even if one failed
+      fail-fast: false
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Generate Arduino library
+      # Generate twice, once to be moved into the Arduino directory and
+      # once to compile the examples from
+      run: |
+        ./target/arduino/export.sh BasicMacCustom
+        ./target/arduino/export.sh BasicMacArduino
+
+    - name: Compile all examples
+      # This uses a fork that also works for .c files and runs outside
+      # of docker (for performance, but also inside docker the lacuna
+      # build somehow fails).
+      # TODO: Convert back to the original once merged:
+      # https://github.com/ArminJo/arduino-test-compile/pull/14
+      # https://github.com/ArminJo/arduino-test-compile/pull/16
+      uses: matthijskooijman/arduino-test-compile@extra-flags-for-c-and-S-and-no-docker
+      with:
+        arduino-board-fqbn: ${{ matrix.board }}
+        platform-default-url: ${{ env.PLATFORM_DEFAULT_URL }}
+        sketch-names-find-start: ./BasicMacArduino/examples/
+        # Normally, all .ino files are treated as separate sketches, but
+        # this is just a secondary .ino file that does not need to be
+        # separately compiled.
+        examples-exclude: standard-pinmaps
+        examples-build-properties: >
+          {"All": "
+            -DBASICMAC_DUMMY_PINMAP
+            -D${{matrix.region}}
+            -D${{matrix.transceiver}}
+            -Werror
+            ${{matrix.extra_flags}}
+          "}

@@ -576,7 +576,7 @@ static u4_t sleep0 (u4_t hticks, u4_t htt, u4_t ltt) {
 }
 
 static void sleep (int stype, u4_t htt, u4_t ltt) {
-    static const u4_t(*sleepfuncs[])(u4_t,u4_t,u4_t) = {
+    static u4_t(* const sleepfuncs[])(u4_t,u4_t,u4_t) = {
         sleep0,
         sleep1,
         sleep2,

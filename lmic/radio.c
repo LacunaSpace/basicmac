@@ -113,7 +113,7 @@ void os_radio (u1_t mode) {
             if( isFsk(LMIC.rps) ) {
                 debug_printf("TX[mod=FSK,nocrc=%d", getNocrc(LMIC.rps));
             } else {
-                assert(isLora(LMIC.rps));
+                ASSERT(isLora(LMIC.rps));
                 debug_printf("TX[mod=LoRa,sf=%d,bw=%d,cr=4/%d,nocrc=%d,ih=%d",
                              getSf(LMIC.rps) - SF7 + 7, 125 << (getBw(LMIC.rps) - BW125),
                              getCr(LMIC.rps) - CR_4_5 + 5, getNocrc(LMIC.rps), getIh(LMIC.rps));
@@ -138,7 +138,7 @@ void os_radio (u1_t mode) {
             if( isFsk(LMIC.rps) ) {
                 debug_printf("RX_MODE[mod=FSK,nocrc=%d", getNocrc(LMIC.rps));
             } else {
-                assert(isLora(LMIC.rps));
+                ASSERT(isLora(LMIC.rps));
                 debug_printf("RX_MODE[mod=LoRa,sf=%d,bw=%d,cr=4/%d,nocrc=%d,ih=%d",
                              getSf(LMIC.rps) - SF7 + 7, 125 << (getBw(LMIC.rps) - BW125),
                              getCr(LMIC.rps) - CR_4_5 + 5, getNocrc(LMIC.rps), getIh(LMIC.rps));
@@ -160,7 +160,7 @@ void os_radio (u1_t mode) {
             if( isFsk(LMIC.rps) ) {
                 debug_printf("RXON_MODE[mod=FSK,nocrc=%d", getNocrc(LMIC.rps));
             } else {
-                assert(isLora(LMIC.rps));
+                ASSERT(isLora(LMIC.rps));
                 debug_printf("RXON_MODE[mod=LoRa,sf=%d,bw=%d,cr=4/%d,nocrc=%d,ih=%d",
                              getSf(LMIC.rps) - SF7 + 7, 125 << (getBw(LMIC.rps) - BW125),
                              getCr(LMIC.rps) - CR_4_5 + 5, getNocrc(LMIC.rps), getIh(LMIC.rps));

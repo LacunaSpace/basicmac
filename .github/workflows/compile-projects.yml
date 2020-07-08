@@ -1,0 +1,42 @@
+name: Compile projects
+on: [push, pull_request]
+jobs:
+  build:
+    name: ${{matrix.target}}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          # List taken from ex-join project, there might be more valid
+          # combinations.
+          - b_l072z_lrwan1
+          - nucleo_l073rz-sx1276mb1las
+          - nucleo_l073rz-sx1272mbed
+          - nucleo_l073rz-sx1276mb1mas
+          - nucleo_l053r8-sx1276mb1las
+          - nucleo_l053r8-sx1261mbed
+          - nucleo_l053r8-sx1262mbed
+
+      # Run the entire matrix, even if one failed
+      fail-fast: false
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Install compiler
+      run: sudo apt install gcc-arm-none-eabi
+
+    - name: Setup python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+
+    - name: Install python packages
+      run: python -m pip install lz4 pycryptodome click intelhex pyyaml
+
+    - name: Compile project
+      run: |
+        make -C projects/ex-join TARGET="${{matrix.target}}" || exit 1

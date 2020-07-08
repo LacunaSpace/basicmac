@@ -37,6 +37,7 @@ ASDEFS		+= $(PDEFS)
 
 CFLAGS		+= -I$(LMICDIR) -I$(HALDIR)
 CFLAGS		+= -I$(COMMONDIR)
+CFLAGS		+= -Werror
 
 BUILDTIME	:= $(shell date -u +'%FT%TZ')
 
