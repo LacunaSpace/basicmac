@@ -77,8 +77,9 @@ STM32, on some specific boards.
 To use it, go into the example project directory (`projects/ex-join`)
 and run `make`.
 
-Some effort has been made to keep these builds working, but testing of
-the code in this repostiory has only been done under Arduino, so the
+Some effort has been made to keep these builds working, but actual
+testing of the code in this repository has only been done under Arduino
+(Makefile-based builds are only automatically compile-tested), so the
 Makefile-based builds might very well be broken.
 
 ### Hardware support

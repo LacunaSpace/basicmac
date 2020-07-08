@@ -254,7 +254,8 @@ void setup() {
     // but only one group of 8 should (a subband) should be active
     // TTN recommends the second sub band, 1 in a zero based count.
     // https://github.com/TheThingsNetwork/gateway-conf/blob/master/US-global_conf.json
-    LMIC_selectSubBand(1);
+    // TODO: How to configure these channels? LMIC had LMIC_selectSubBand,
+    // but it seems BasicMac only has LMIC_disableChannel.
     #endif
 
     // Disable link check validation

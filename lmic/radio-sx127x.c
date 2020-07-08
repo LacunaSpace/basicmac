@@ -514,6 +514,7 @@ static void setRadioConsumption_ua (bool boost, u1_t pow) {
         ua = RFOPOW[pow];
     }
 #else
+    (void)boost; (void)pow; // unused
     ua = 120000; // something better than nothing?
 #endif
     LMIC.radioPwr_ua = ua;
@@ -698,7 +699,7 @@ static void txfsk (bool txcont) {
         hal_irqmask_set(HAL_IRQMASK_DIO0 | HAL_IRQMASK_DIO1);
 
         // set tx timeout
-        radio_set_irq_timeout(os_getTime() + us2osticks((FIFOTHRESH+10)*8*1000/50));
+        radio_set_irq_timeout(os_getTime() + us2osticks((u4_t)(FIFOTHRESH+10)*8*1000/50));
     }
 
     // enable antenna switch for TX
@@ -988,7 +989,7 @@ static void rxfsk (bool rxcontinuous) {
         // set preamble timeout
         writeReg(FSKRegRxTimeout2, (LMIC.rxsyms + 1) / 2); // (TimeoutRxPreamble * 16 * Tbit)
         // set rx timeout
-        radio_set_irq_timeout(LMIC.rxtime + us2osticks((2*FIFOTHRESH)*8*1000/50));
+        radio_set_irq_timeout(LMIC.rxtime + us2osticks((u4_t)(2*FIFOTHRESH)*8*1000/50));
         // busy wait until exact rx time
         ostime_t now = os_getTime();
         if (LMIC.rxtime - now < 0) {
@@ -1159,6 +1160,8 @@ void radio_init (bool calibrate) {
 
 // (run by irqjob)
 bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
+    (void)diomask; //unused
+
     // dispatch modem
     if (isFsk(LMIC.rps)) { // FSK modem
         u1_t irqflags1 = readReg(FSKRegIrqFlags1);
@@ -1202,7 +1205,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             LoadFifo();
 
             // update tx timeout
-            radio_set_irq_timeout(irqtime + us2osticks((FIFOTHRESH+10)*8*1000/50));
+            radio_set_irq_timeout(irqtime + us2osticks((u4_t)(FIFOTHRESH+10)*8*1000/50));
 
             // keep waiting for FifoEmpty or PacketSent interrupt
             return false;
@@ -1214,7 +1217,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
             UnloadFifo();
 
             // update rx timeout
-            radio_set_irq_timeout(irqtime + us2osticks((FIFOTHRESH+10)*8*1000/50));
+            radio_set_irq_timeout(irqtime + us2osticks((u4_t)(FIFOTHRESH+10)*8*1000/50));
 
             // keep waiting for FifoLevel or PayloadReady interrupt
             return false;

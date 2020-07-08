@@ -12,6 +12,8 @@
 // Must be first, otherwise it might have already been included without _GNU_SOURCE
 #include <stdio.h>
 #undef _GNU_SOURCE
+// Prevent warning on samd where samd21g18a.h from CMSIS defines this
+#undef LITTLE_ENDIAN
 #include <Arduino.h>
 #include <SPI.h>
 #include "../basicmac.h"
