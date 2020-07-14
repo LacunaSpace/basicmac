@@ -738,6 +738,7 @@ static void hal_io_init () {
 #endif
 }
 
+#if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 bool hal_pin_tcxo (u1_t val) {
 #if defined(GPIO_TCXO_PWR)
     if (val != 0) {
@@ -752,6 +753,7 @@ bool hal_pin_tcxo (u1_t val) {
     return false;
 #endif
 }
+#endif // defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 
 void hal_ant_switch (u1_t val) {
 #ifdef SVC_pwrman

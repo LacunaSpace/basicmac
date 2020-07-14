@@ -49,6 +49,10 @@ static void hal_io_init () {
     ASSERT(lmic_pins.busy != LMIC_UNUSED_PIN);
 #endif
 
+#if !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio)
+    ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN);
+#endif
+
     // Write HIGH to deselect (NSS is active low). Do this before
     // setting output, to prevent a moment of OUTPUT LOW on e.g. AVR.
     digitalWrite(lmic_pins.nss, HIGH);
@@ -117,6 +121,7 @@ static void hal_io_check() {
     }
 }
 
+#if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 bool hal_pin_tcxo (u1_t val) {
     if (lmic_pins.tcxo == LMIC_UNUSED_PIN)
         return false;
@@ -124,6 +129,7 @@ bool hal_pin_tcxo (u1_t val) {
     digitalWrite(lmic_pins.tcxo, val);
     return true;
 }
+#endif // defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 
 void hal_pin_busy_wait (void) {
     if (lmic_pins.busy == LMIC_UNUSED_PIN) {

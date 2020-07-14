@@ -34,11 +34,13 @@ void hal_watchcount (int cnt);
 #define HAL_ANTSW_TX2  3
 void hal_ant_switch (u1_t val);
 
+#if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 /*
  * control radio TCXO power (0=off, 1=on)
  * (return if TCXO is present and in use)
  */
 bool hal_pin_tcxo (u1_t val);
+#endif // defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 
 /*
  * control radio RST pin (0=low, 1=high, 2=floating)
