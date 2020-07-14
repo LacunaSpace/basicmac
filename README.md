@@ -27,6 +27,15 @@ pullrequests to keep history clean.
 The API is still likely to change in a breaking way, especially wrt
 configuration.
 
+### Notable and breaking changes
+
+This section lists notable changes, in particular those that can break
+existing sketches. For full details, see the git changelog.
+
+ - 2020-07-14: On Arduino, the default config is changed to SX1262. If
+   your board uses SX1276 (the old default), you need to modify
+   `target-config.h` in the library.
+
 ### Relation to other projects
 
 BasicMAC is a privately developed fork of LMIC, which was released

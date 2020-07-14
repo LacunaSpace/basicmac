@@ -14,9 +14,9 @@
 //#define BRD_sx1272_radio 1
 // This is the SX1276/SX1277/SX1278/SX1279 radio, which is also used on
 // the HopeRF RFM95 boards.
-#define BRD_sx1276_radio 1
+//#define BRD_sx1276_radio 1
 // This is the newer SX1261/SX1261 radio.
-// #define BRD_sx1262_radio 1
+#define BRD_sx1262_radio 1
 #endif // !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio) && !defined(BRD_sx1262_radio)
 
 // 16 μs per tick
