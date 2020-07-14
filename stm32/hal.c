@@ -816,6 +816,16 @@ void hal_pin_busy_wait (void) {
 #endif
 }
 
+#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+bool hal_dio3_controls_tcxo (void) {
+    #if defined(LMIC_DIO3_CONTROLS_TCXO)
+    return true;
+    #else
+    return false;
+    #endif
+}
+#endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+
 #define DIO_UPDATE(dio,mask,time) do { \
     if( (EXTI->PR & (1 << BRD_PIN(GPIO_DIO ## dio))) ) { \
         EXTI->PR = (1 << BRD_PIN(GPIO_DIO ## dio)); \

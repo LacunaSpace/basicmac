@@ -51,6 +51,8 @@ static void hal_io_init () {
 
 #if !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio)
     ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN);
+#else
+    ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN || lmic_pins.tcxo == LMIC_CONTROLLED_BY_DIO3);
 #endif
 
     // Write HIGH to deselect (NSS is active low). Do this before
@@ -146,6 +148,12 @@ void hal_pin_busy_wait (void) {
         while((micros() - start) < MAX_BUSY_TIME && digitalRead(lmic_pins.busy)) /* wait */;
     }
 }
+
+#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+bool hal_dio3_controls_tcxo (void) {
+    return lmic_pins.tcxo == LMIC_CONTROLLED_BY_DIO3;
+}
+#endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 
 // -----------------------------------------------------------------------------
 // SPI

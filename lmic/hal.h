@@ -62,6 +62,15 @@ void hal_pin_busy_wait (void);
 #define HAL_IRQMASK_DIO3 (1<<3)
 void hal_irqmask_set (int mask);
 
+#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+/*
+ * Returns true if DIO3 should control the TCXO.
+ * TODO: Reconsider this HAL function, maybe integrate with hal_pin_tcxo
+ * somehow?
+ */
+bool hal_dio3_controls_tcxo (void);
+#endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+
 /*
  * drive radio NSS pin (on=low, off=high).
  */

@@ -91,7 +91,15 @@ const lmic_pinmap lmic_pins = {
     // cause problems.
     .busy = LMIC_UNUSED_PIN,
     // TCXO oscillator enable output pin (active high).
-    // The SX126x can control the TCXO directly through its DIO3 output pin.
+    //
+    // For SX127x this should be an I/O pin that controls the TCXO, or
+    // LMIC_UNUSED_PIN when a crystal is used instead of a TCXO.
+    //
+    // For SX126x this should be LMIC_CONTROLLED_BY_DIO3 when a TCXO is
+    // directly connected to the transceiver DIO3 to let the transceiver
+    // start and stop the TCXO, or LMIC_UNUSED_PIN when a crystal is
+    // used instead of a TCXO. Controlling the TCXO from the MCU is not
+    // supported.
     .tcxo = LMIC_UNUSED_PIN,
 };
 #endif // !defined(USE_STANDARD_PINMAP)

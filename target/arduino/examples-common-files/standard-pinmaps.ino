@@ -84,8 +84,7 @@ const lmic_pinmap lmic_pins = {
     .rst = E22_NRST, // PA4
     .dio = {LMIC_UNUSED_PIN, E22_DIO1 /* PC7 */, LMIC_UNUSED_PIN},
     .busy = E22_BUSY, // PB12
-    // TCXO is controlled through DIO3 by the SX1262 directly
-    .tcxo = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_CONTROLLED_BY_DIO3,
 };
 #else
 #error "Unknown board, no standard pimap available. Define your own in the main sketch file."

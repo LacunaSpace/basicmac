@@ -36,6 +36,12 @@ existing sketches. For full details, see the git changelog.
    your board uses SX1276 (the old default), you need to modify
    `target-config.h` in the library.
 
+ - 2020-07-14: On SX126x, DIO3 is no longer configured to control a TCXO
+   by default. If your board needs this, it must be explicitly enabled.
+   On Arduino, set the `tcxo` field of the pin map to
+   `LMIC_CONTROLLED_BY_DIO3`. With Makefile-based stm32, define
+   `LMIC_DIO3_CONTROLS_TCXO` on the compiler commandline.
+
 ### Relation to other projects
 
 BasicMAC is a privately developed fork of LMIC, which was released
