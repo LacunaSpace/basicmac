@@ -30,29 +30,33 @@ static unsigned long MAX_BUSY_TIME = 5000;
 
 static void hal_io_init () {
     uint8_t i;
-    ASSERT(lmic_pins.nss != LMIC_UNUSED_PIN);
+    // Checks below assume that all special pin values are >= LMIC_UNUSED_PIN, so check that.
+    #if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+    LMIC_STATIC_ASSERT(LMIC_UNUSED_PIN < LMIC_CONTROLLED_BY_DIO3, "Unexpected constant values");
+    #endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+
+    ASSERT(lmic_pins.nss < LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.rst <= LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.rx <= LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.tx <= LMIC_UNUSED_PIN);
 
 #if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
     //DIO0 is required, DIO1 is required for LoRa, DIO2 for FSK
-    ASSERT(lmic_pins.dio[0] != LMIC_UNUSED_PIN);
-    ASSERT(lmic_pins.dio[1] != LMIC_UNUSED_PIN || lmic_pins.dio[2] != LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.dio[0] < LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.dio[1] < LMIC_UNUSED_PIN || lmic_pins.dio[2] < LMIC_UNUSED_PIN);
+
+    ASSERT(lmic_pins.busy == LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN);
 #elif defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
     // Only DIO1 should be specified
     ASSERT(lmic_pins.dio[0] == LMIC_UNUSED_PIN);
-    ASSERT(lmic_pins.dio[1] != LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.dio[1] < LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.dio[2] == LMIC_UNUSED_PIN);
+
+    ASSERT(lmic_pins.busy < LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN || lmic_pins.tcxo == LMIC_CONTROLLED_BY_DIO3);
 #else
     #error "Unknown radio type?"
-#endif
-
-#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
-    ASSERT(lmic_pins.busy != LMIC_UNUSED_PIN);
-#endif
-
-#if !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio)
-    ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN);
-#else
-    ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN || lmic_pins.tcxo == LMIC_CONTROLLED_BY_DIO3);
 #endif
 
     // Write HIGH to deselect (NSS is active low). Do this before
@@ -63,19 +67,19 @@ static void hal_io_init () {
     // reset to LOW when setting OUTPUT (e.g. arduino-STM32L4).
     digitalWrite(lmic_pins.nss, HIGH);
 
-    if (lmic_pins.tx != LMIC_UNUSED_PIN)
+    if (lmic_pins.tx < LMIC_UNUSED_PIN)
         pinMode(lmic_pins.tx, OUTPUT);
-    if (lmic_pins.rx != LMIC_UNUSED_PIN)
+    if (lmic_pins.rx < LMIC_UNUSED_PIN)
         pinMode(lmic_pins.rx, OUTPUT);
-    if (lmic_pins.rst != LMIC_UNUSED_PIN)
+    if (lmic_pins.rst < LMIC_UNUSED_PIN)
         pinMode(lmic_pins.rst, OUTPUT);
-    if (lmic_pins.busy != LMIC_UNUSED_PIN)
+    if (lmic_pins.busy < LMIC_UNUSED_PIN)
         pinMode(lmic_pins.busy, INPUT);
-    if (lmic_pins.tcxo != LMIC_UNUSED_PIN)
+    if (lmic_pins.tcxo < LMIC_UNUSED_PIN)
         pinMode(lmic_pins.tcxo, OUTPUT);
 
     for (i = 0; i < NUM_DIO; ++i) {
-        if (lmic_pins.dio[i] != LMIC_UNUSED_PIN)
+        if (lmic_pins.dio[i] < LMIC_UNUSED_PIN)
             pinMode(lmic_pins.dio[i], INPUT);
     }
 }
@@ -83,15 +87,15 @@ static void hal_io_init () {
 // rx = 0, tx = 1, off = -1
 void hal_ant_switch (u1_t val) {
     // TODO: Support separate pin for TX2 (PA_BOOST output)
-    if (lmic_pins.tx != LMIC_UNUSED_PIN)
+    if (lmic_pins.tx < LMIC_UNUSED_PIN)
         digitalWrite(lmic_pins.tx, val == HAL_ANTSW_TX || val == HAL_ANTSW_TX2);
-    if (lmic_pins.rx != LMIC_UNUSED_PIN)
+    if (lmic_pins.rx < LMIC_UNUSED_PIN)
         digitalWrite(lmic_pins.rx, val == HAL_ANTSW_RX);
 }
 
 // set radio RST pin to given value (or keep floating!)
 bool hal_pin_rst (u1_t val) {
-    if (lmic_pins.rst == LMIC_UNUSED_PIN)
+    if (lmic_pins.rst >= LMIC_UNUSED_PIN)
         return false;
 
     if(val == 0 || val == 1) { // drive pin
@@ -112,7 +116,7 @@ static bool dio_states[NUM_DIO] = {0};
 static void hal_io_check() {
     uint8_t i;
     for (i = 0; i < NUM_DIO; ++i) {
-        if (lmic_pins.dio[i] == LMIC_UNUSED_PIN)
+        if (lmic_pins.dio[i] >= LMIC_UNUSED_PIN)
             continue;
 
         if (dio_states[i] != digitalRead(lmic_pins.dio[i])) {
@@ -125,7 +129,7 @@ static void hal_io_check() {
 
 #if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 bool hal_pin_tcxo (u1_t val) {
-    if (lmic_pins.tcxo == LMIC_UNUSED_PIN)
+    if (lmic_pins.tcxo >= LMIC_UNUSED_PIN)
         return false;
 
     digitalWrite(lmic_pins.tcxo, val);
@@ -134,7 +138,7 @@ bool hal_pin_tcxo (u1_t val) {
 #endif // defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 
 void hal_pin_busy_wait (void) {
-    if (lmic_pins.busy == LMIC_UNUSED_PIN) {
+    if (lmic_pins.busy >= LMIC_UNUSED_PIN) {
         // TODO: We could probably keep some state so we know the chip
         // is in sleep, since otherwise the delay can be much shorter.
         // Also, all delays after commands (rather than waking up from
