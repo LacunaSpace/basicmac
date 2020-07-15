@@ -5,13 +5,14 @@ jobs:
     name: ${{ matrix.board }} / ${{ matrix.region }} / ${{ matrix.transceiver }}
     runs-on: ubuntu-latest
     env:
-      PLATFORM_DEFAULT_URL: https://arduino.esp8266.com/stable/package_esp8266com_index.json,https://github.com/stm32duino/BoardManagerFiles/raw/master/STM32/package_stm_index.json,https://lacunaspace.github.io/arduino-STM32L4-Lacuna/package_STM32L4_Lacuna_boards_index.json
+      PLATFORM_DEFAULT_URL: https://arduino.esp8266.com/stable/package_esp8266com_index.json,https://dl.espressif.com/dl/package_esp32_index.json,https://github.com/stm32duino/BoardManagerFiles/raw/master/STM32/package_stm_index.json,https://lacunaspace.github.io/arduino-STM32L4-Lacuna/package_STM32L4_Lacuna_boards_index.json
     strategy:
       matrix:
         board:
           - arduino:avr:mega
           - arduino:samd:arduino_zero_edbg
           - esp8266:esp8266:generic
+          - esp32:esp32:ttgo-lora32-v1
           - lacunaspace:stm32l4:Lacuna-LS200
             # Just a random STM32 board
           - STM32:stm32:Nucleo_64:pnum=NUCLEO_F401RE
