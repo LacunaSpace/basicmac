@@ -8,14 +8,16 @@
 
 #define CFG_autojoin
 
-#if !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio) && !defined(BRD_sx1262_radio)
+#if !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio) && !defined(BRD_sx1261_radio) && !defined(BRD_sx1262_radio)
 // This is the SX1272/SX1273 radio, which is also used on the HopeRF
 // RFM92 boards.
 //#define BRD_sx1272_radio 1
 // This is the SX1276/SX1277/SX1278/SX1279 radio, which is also used on
 // the HopeRF RFM95 boards.
 //#define BRD_sx1276_radio 1
-// This is the newer SX1261/SX1261 radio.
+// This is the newer SX1261 radio (up to +15dBM).
+//#define BRD_sx1261_radio 1
+// This is the newer SX1262 radio (up to +22dBM).
 #define BRD_sx1262_radio 1
 #endif // !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio) && !defined(BRD_sx1262_radio)
 
