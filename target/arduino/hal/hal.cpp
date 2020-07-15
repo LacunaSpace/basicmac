@@ -53,7 +53,7 @@ static void hal_io_init () {
     ASSERT(lmic_pins.dio[1] < LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.dio[2] == LMIC_UNUSED_PIN);
 
-    ASSERT(lmic_pins.busy < LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.busy <= LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN || lmic_pins.tcxo == LMIC_CONTROLLED_BY_DIO3);
 #else
     #error "Unknown radio type?"
