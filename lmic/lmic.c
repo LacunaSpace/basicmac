@@ -222,6 +222,7 @@ static const region_t REGIONS[REGIONS_COUNT] = {
             { 865000000, 868000000, CAP_CENTI, 16 }, // h1.4
             { 868000000, 868600000, CAP_CENTI, 16 }, // h1.5
             { 869700000, 870000000, CAP_CENTI, 16 }, // h1.9
+            { 862000000, 863000000, CAP_MILLI, 16 }, // h0, max 350kHz BW (not enforced)
             { 863000000, 865000000, CAP_MILLI, 16 }, // h1.3
             { 868700000, 869200000, CAP_MILLI, 16 }, // h1.6
         },
