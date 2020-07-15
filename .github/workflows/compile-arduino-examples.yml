@@ -21,6 +21,7 @@ jobs:
         transceiver:
           - BRD_sx1272_radio
           - BRD_sx1276_radio
+          - BRD_sx1261_radio
           - BRD_sx1262_radio
         include:
           # Older compilers (used by STM32 and ESP) seem to get confused
