@@ -546,8 +546,10 @@ void radio_sleep (void) {
 // Do config common to all RF modes
 static void CommonSetup (void) {
     SetRegulatorMode(REGMODE_DCDC);
-    SetDIO2AsRfSwitchCtrl(1);
-    SetDIO3AsTcxoCtrl();
+    if (hal_dio2_controls_rxtx())
+        SetDIO2AsRfSwitchCtrl(1);
+    if (hal_dio3_controls_tcxo())
+        SetDIO3AsTcxoCtrl();
 }
 
 static void txlora (void) {
