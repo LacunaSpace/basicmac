@@ -78,8 +78,7 @@ const lmic_pinmap lmic_pins = {
 // This uses E22_* constants from the board variant file
 const lmic_pinmap lmic_pins = {
     .nss = E22_NSS, // PD2
-    // TXEN is controlled through DIO2 by the SX1262 directly
-    .tx = LMIC_UNUSED_PIN,
+    .tx = LMIC_CONTROLLED_BY_DIO2,
     .rx = E22_RXEN, // PC4
     .rst = E22_NRST, // PA4
     .dio = {LMIC_UNUSED_PIN, E22_DIO1 /* PC7 */, LMIC_UNUSED_PIN},

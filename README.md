@@ -42,6 +42,13 @@ existing sketches. For full details, see the git changelog.
    `LMIC_CONTROLLED_BY_DIO3`. With Makefile-based stm32, define
    `LMIC_DIO3_CONTROLS_TCXO` on the compiler commandline.
 
+ - 2020-07-14: On SX126x, DIO2 is no longer configured to control a TXRX
+   antenna switch by default. If your board needs this (most likely it
+   does), it must be explicitly enabled. On Arduino, set the `tx`
+   field of the pin map to `LMIC_CONTROLLED_BY_DIO2`. With
+   Makefile-based stm32, define `LMIC_DIO2_CONTROLS_TXRX` on the
+   compiler commandline.
+
 ### Relation to other projects
 
 BasicMAC is a privately developed fork of LMIC, which was released

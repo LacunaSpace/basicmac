@@ -69,6 +69,13 @@ void hal_irqmask_set (int mask);
  * somehow?
  */
 bool hal_dio3_controls_tcxo (void);
+
+/*
+ * Returns true if DIO2 should control the RXTX switch.
+ * TODO: Reconsider this HAL function, maybe integrate with
+ * hal_ant_switch somehow?
+ */
+bool hal_dio2_controls_rxtx (void);
 #endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 
 /*

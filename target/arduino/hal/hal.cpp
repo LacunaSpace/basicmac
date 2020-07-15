@@ -33,12 +33,12 @@ static void hal_io_init () {
     // Checks below assume that all special pin values are >= LMIC_UNUSED_PIN, so check that.
     #if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
     LMIC_STATIC_ASSERT(LMIC_UNUSED_PIN < LMIC_CONTROLLED_BY_DIO3, "Unexpected constant values");
+    LMIC_STATIC_ASSERT(LMIC_UNUSED_PIN < LMIC_CONTROLLED_BY_DIO2, "Unexpected constant values");
     #endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 
     ASSERT(lmic_pins.nss < LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.rst <= LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.rx <= LMIC_UNUSED_PIN);
-    ASSERT(lmic_pins.tx <= LMIC_UNUSED_PIN);
 
 #if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
     //DIO0 is required, DIO1 is required for LoRa, DIO2 for FSK
@@ -47,6 +47,7 @@ static void hal_io_init () {
 
     ASSERT(lmic_pins.busy == LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN);
+    ASSERT(lmic_pins.tx <= LMIC_UNUSED_PIN);
 #elif defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
     // Only DIO1 should be specified
     ASSERT(lmic_pins.dio[0] == LMIC_UNUSED_PIN);
@@ -55,6 +56,7 @@ static void hal_io_init () {
 
     ASSERT(lmic_pins.busy <= LMIC_UNUSED_PIN);
     ASSERT(lmic_pins.tcxo == LMIC_UNUSED_PIN || lmic_pins.tcxo == LMIC_CONTROLLED_BY_DIO3);
+    ASSERT(lmic_pins.tx <= LMIC_UNUSED_PIN || lmic_pins.tx == LMIC_CONTROLLED_BY_DIO2);
 #else
     #error "Unknown radio type?"
 #endif
@@ -156,6 +158,9 @@ void hal_pin_busy_wait (void) {
 #if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 bool hal_dio3_controls_tcxo (void) {
     return lmic_pins.tcxo == LMIC_CONTROLLED_BY_DIO3;
+}
+bool hal_dio2_controls_rxtx (void) {
+    return lmic_pins.tx == LMIC_CONTROLLED_BY_DIO2;
 }
 #endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 

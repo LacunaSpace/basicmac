@@ -824,6 +824,14 @@ bool hal_dio3_controls_tcxo (void) {
     return false;
     #endif
 }
+
+bool hal_dio2_controls_rxtx (void) {
+    #if defined(LMIC_DIO2_CONTROLS_RXTX)
+    return true;
+    #else
+    return false;
+    #endif
+}
 #endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 
 #define DIO_UPDATE(dio,mask,time) do { \
