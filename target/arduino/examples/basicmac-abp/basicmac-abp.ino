@@ -52,7 +52,10 @@ static const u4_t DEVADDR = 0x03FF0001 ; // <-- Change this address for every no
 void os_getJoinEui (u1_t* /* buf */) { }
 void os_getDevEui (u1_t* /* buf */) { }
 void os_getNwkKey (u1_t* /* buf */) { }
-u1_t os_getRegion (void) { return REGCODE_EU868; }
+
+// The region to use, this just uses the first one (can be changed if
+// multiple regions are enabled).
+u1_t os_getRegion (void) { return LMIC_regionCode(0); }
 
 // Schedule TX every this many milliseconds (might become longer due to duty
 // cycle limitations).

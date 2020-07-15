@@ -51,8 +51,9 @@ void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8);}
 static const u1_t PROGMEM APPKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
 void os_getNwkKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
 
-// The region to use
-u1_t os_getRegion (void) { return REGCODE_EU868; }
+// The region to use, this just uses the first one (can be changed if
+// multiple regions are enabled).
+u1_t os_getRegion (void) { return LMIC_regionCode(0); }
 
 // Schedule TX every this many milliseconds (might become longer due to duty
 // cycle limitations).
