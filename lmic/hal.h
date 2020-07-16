@@ -34,11 +34,13 @@ void hal_watchcount (int cnt);
 #define HAL_ANTSW_TX2  3
 void hal_ant_switch (u1_t val);
 
+#if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 /*
  * control radio TCXO power (0=off, 1=on)
  * (return if TCXO is present and in use)
  */
 bool hal_pin_tcxo (u1_t val);
+#endif // defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 
 /*
  * control radio RST pin (0=low, 1=high, 2=floating)
@@ -59,6 +61,22 @@ void hal_pin_busy_wait (void);
 #define HAL_IRQMASK_DIO2 (1<<2)
 #define HAL_IRQMASK_DIO3 (1<<3)
 void hal_irqmask_set (int mask);
+
+#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+/*
+ * Returns true if DIO3 should control the TCXO.
+ * TODO: Reconsider this HAL function, maybe integrate with hal_pin_tcxo
+ * somehow?
+ */
+bool hal_dio3_controls_tcxo (void);
+
+/*
+ * Returns true if DIO2 should control the RXTX switch.
+ * TODO: Reconsider this HAL function, maybe integrate with
+ * hal_ant_switch somehow?
+ */
+bool hal_dio2_controls_rxtx (void);
+#endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 
 /*
  * drive radio NSS pin (on=low, off=high).

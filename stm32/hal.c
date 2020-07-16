@@ -738,6 +738,7 @@ static void hal_io_init () {
 #endif
 }
 
+#if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 bool hal_pin_tcxo (u1_t val) {
 #if defined(GPIO_TCXO_PWR)
     if (val != 0) {
@@ -752,6 +753,7 @@ bool hal_pin_tcxo (u1_t val) {
     return false;
 #endif
 }
+#endif // defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
 
 void hal_ant_switch (u1_t val) {
 #ifdef SVC_pwrman
@@ -813,6 +815,24 @@ void hal_pin_busy_wait (void) {
     CFG_PIN_DEFAULT(GPIO_BUSY);
 #endif
 }
+
+#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+bool hal_dio3_controls_tcxo (void) {
+    #if defined(LMIC_DIO3_CONTROLS_TCXO)
+    return true;
+    #else
+    return false;
+    #endif
+}
+
+bool hal_dio2_controls_rxtx (void) {
+    #if defined(LMIC_DIO2_CONTROLS_RXTX)
+    return true;
+    #else
+    return false;
+    #endif
+}
+#endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 
 #define DIO_UPDATE(dio,mask,time) do { \
     if( (EXTI->PR & (1 << BRD_PIN(GPIO_DIO ## dio))) ) { \
