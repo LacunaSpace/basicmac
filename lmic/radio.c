@@ -26,8 +26,11 @@ static void radio_stop (void) {
     radio_sleep();
     // disable antenna switch
     hal_ant_switch(HAL_ANTSW_OFF);
+#if defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
     // power-down TCXO
     hal_pin_tcxo(0);
+#endif // defined(BRD_sx1272_radio) || defined(BRD_sx1276_radio)
+    // disable antenna switch
     // disable IRQs in HAL
     hal_irqmask_set(0);
     // cancel radio job

@@ -1,22 +1,31 @@
 #ifndef _lmic_arduino_hal_config_h_
 #define _lmic_arduino_hal_config_h_
 
+// This defines the region(s) to use. You can enable more than one and
+// then select the right region at runtime using os_getRegion() and/or
+// LMIC_reset_ex().
 #if !defined(CFG_eu868) && !defined(CFG_us915)
 #define CFG_eu868 1
 //#define CFG_us915 1
+//#define CFG_as923 1
+//#define CFG_il915 1
+//#define CFG_kr920 1
+//#define CFG_au915 1
 #endif // !defined(CFG_eu868) && !defined(CFG_us915)
 
 #define CFG_autojoin
 
-#if !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio) && !defined(BRD_sx1262_radio)
+#if !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio) && !defined(BRD_sx1261_radio) && !defined(BRD_sx1262_radio)
 // This is the SX1272/SX1273 radio, which is also used on the HopeRF
 // RFM92 boards.
 //#define BRD_sx1272_radio 1
 // This is the SX1276/SX1277/SX1278/SX1279 radio, which is also used on
 // the HopeRF RFM95 boards.
-#define BRD_sx1276_radio 1
-// This is the newer SX1261/SX1261 radio.
-// #define BRD_sx1262_radio 1
+//#define BRD_sx1276_radio 1
+// This is the newer SX1261 radio (up to +15dBM).
+//#define BRD_sx1261_radio 1
+// This is the newer SX1262 radio (up to +22dBM).
+#define BRD_sx1262_radio 1
 #endif // !defined(BRD_sx1272_radio) && !defined(BRD_sx1276_radio) && !defined(BRD_sx1262_radio)
 
 // 16 μs per tick

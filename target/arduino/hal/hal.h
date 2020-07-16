@@ -28,7 +28,13 @@ struct lmic_pinmap {
 };
 
 // Use this for any unused pins.
-const u1_t LMIC_UNUSED_PIN = 0xff;
+const u1_t LMIC_UNUSED_PIN = 0xfd;
+
+#if defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+// Used for lmic_pinmap.tcxo only
+const u1_t LMIC_CONTROLLED_BY_DIO3 = 0xff;
+const u1_t LMIC_CONTROLLED_BY_DIO2 = 0xfe;
+#endif // defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
 
 // Declared here, to be defined an initialized by the application
 extern const lmic_pinmap lmic_pins;

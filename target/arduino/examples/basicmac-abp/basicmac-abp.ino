@@ -52,7 +52,10 @@ static const u4_t DEVADDR = 0x03FF0001 ; // <-- Change this address for every no
 void os_getJoinEui (u1_t* /* buf */) { }
 void os_getDevEui (u1_t* /* buf */) { }
 void os_getNwkKey (u1_t* /* buf */) { }
-u1_t os_getRegion (void) { return REGCODE_EU868; }
+
+// The region to use, this just uses the first one (can be changed if
+// multiple regions are enabled).
+u1_t os_getRegion (void) { return LMIC_regionCode(0); }
 
 // Schedule TX every this many milliseconds (might become longer due to duty
 // cycle limitations).
@@ -72,9 +75,17 @@ const lmic_pinmap lmic_pins = {
     // If needed, these pins control the RX/TX antenna switch (active
     // high outputs). When you have both, the antenna switch can
     // powerdown when unused. If you just have a RXTX pin it should
-    // usually be set to .tx, reverting to RX mode when idle).
-    // Often, the antenna switch is controlled directly by the radio
-    // chip, through is RXTX (SX127x) or DIO2 (SX126x) output pins.
+    // usually be assigned to .tx, reverting to RX mode when idle).
+    //
+    // The SX127x has an RXTX pin that can automatically control the
+    // antenna switch (if internally connected on the transceiver
+    // board). This pin is always active, so no configuration is needed
+    // for that here.
+    // On SX126x, the DIO2 can be used for the same thing, but this is
+    // disabled by default. To enable this, set .tx to
+    // LMIC_CONTROLLED_BY_DIO2 below (this seems to be common and
+    // enabling it when not needed is probably harmless, unless DIO2 is
+    // connected to GND or VCC directly inside the transceiver board).
     .tx = LMIC_UNUSED_PIN,
     .rx = LMIC_UNUSED_PIN,
     // Radio reset output pin (active high for SX1276, active low for
@@ -88,7 +99,15 @@ const lmic_pinmap lmic_pins = {
     // cause problems.
     .busy = LMIC_UNUSED_PIN,
     // TCXO oscillator enable output pin (active high).
-    // The SX126x can control the TCXO directly through its DIO3 output pin.
+    //
+    // For SX127x this should be an I/O pin that controls the TCXO, or
+    // LMIC_UNUSED_PIN when a crystal is used instead of a TCXO.
+    //
+    // For SX126x this should be LMIC_CONTROLLED_BY_DIO3 when a TCXO is
+    // directly connected to the transceiver DIO3 to let the transceiver
+    // start and stop the TCXO, or LMIC_UNUSED_PIN when a crystal is
+    // used instead of a TCXO. Controlling the TCXO from the MCU is not
+    // supported.
     .tcxo = LMIC_UNUSED_PIN,
 };
 #endif // !defined(USE_STANDARD_PINMAP)
