@@ -9,6 +9,7 @@
 :: \name Remko Welling (pe1mew@gmail.com)
 
 SET option=%1
+SET target_directory=%1
 SET source_directory=%~dp0
 
 :: Select operation: "-" is command, else run
@@ -40,11 +41,11 @@ GOTO :EOF
 
 :RUN
 :: Normal operation.
-   IF NOT EXIST "%option:"=%" (
-      ECHO Target directory "%option:"=%" does not exist.
+   IF NOT EXIST "%target_directory:"=%" (
+      ECHO Target directory "%target_directory:"=%" does not exist.
       GOTO :EOF
    ) 
-   IF EXIST "%option:"=%\BasicMAC" (
+   IF EXIST "%target_directory:"=%\BasicMAC" (
       GOTO :DO_REMOVE
    ) ELSE (
       GOTO :DO_CREATE
@@ -53,53 +54,53 @@ GOTO :EOF
 
 :DO_REMOVE
 :: Remove existing directory, prompt for acknowledge.
-   ECHO Removing directory "%option:"=%\BasicMAC",
+   ECHO Removing directory "%target_directory:"=%\BasicMAC",
    SET /P AREYOUSURE=Are you sure (Y/[N])?
    IF /I "%AREYOUSURE%" NEQ "Y" GOTO :EOF
    
-   rmdir /s /q "%option:"=%\BasicMAC"
+   rmdir /s /q "%target_directory:"=%\BasicMAC"
 
 :DO_CREATE
 :: Create directory structure for library in target directory
-   ECHO Ceating Arduino library in: "%option:"=%"
-   IF NOT EXIST "%option:"=%\BasicMAC" (
-      md "%option:"=%\BasicMAC"
+   ECHO Ceating Arduino library in: "%target_directory:"=%"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC" (
+      md "%target_directory:"=%\BasicMAC"
    )
-   IF NOT EXIST "%option:"=%\BasicMAC\src" (
-      md "%option:"=%\BasicMAC\src"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC\src" (
+      md "%target_directory:"=%\BasicMAC\src"
    )
-   IF NOT EXIST "%option:"=%\BasicMAC\src\lmic" (
-      md "%option:"=%\BasicMAC\src\lmic"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC\src\lmic" (
+      md "%target_directory:"=%\BasicMAC\src\lmic"
    )
-   IF NOT EXIST "%option:"=%\BasicMAC\src\hal" (
-      md "%option:"=%\BasicMAC\src\hal"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC\src\hal" (
+      md "%target_directory:"=%\BasicMAC\src\hal"
    )
-   IF NOT EXIST "%option:"=%\BasicMAC\src\aes" (
-      md "%option:"=%\BasicMAC\src\aes"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC\src\aes" (
+      md "%target_directory:"=%\BasicMAC\src\aes"
    )
-   IF NOT EXIST "%option:"=%\BasicMAC\examples" (
-      md "%option:"=%\BasicMAC\examples"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC\examples" (
+      md "%target_directory:"=%\BasicMAC\examples"
    )
-   IF NOT EXIST "%option:"=%\BasicMAC\examples\basicmac-abp" (
-      md "%option:"=%\BasicMAC\examples\basicmac-abp"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC\examples\basicmac-abp" (
+      md "%target_directory:"=%\BasicMAC\examples\basicmac-abp"
    )
-   IF NOT EXIST "%option:"=%\BasicMAC\examples\basicmac-otaa" (
-      md "%option:"=%\BasicMAC\examples\basicmac-otaa"
+   IF NOT EXIST "%target_directory:"=%\BasicMAC\examples\basicmac-otaa" (
+      md "%target_directory:"=%\BasicMAC\examples\basicmac-otaa"
    )
 
 :DO_COPY
    :: Copy relevant files from git repository to Arduino Library
    @ECHO on
-   COPY "%source_directory%library.properties" "%option:"=%\BasicMAC\library.properties"
-   COPY "%source_directory%basicmac.h" "%option:"=%\BasicMAC\src"
-   COPY "%source_directory%..\..\lmic" "%option:"=%\BasicMAC\src\lmic"
-   COPY "%source_directory%hal" "%option:"=%\BasicMAC\src\hal"
-   COPY "%source_directory%..\..\aes" "%option:"=%\BasicMAC\src\aes"
-   COPY "%source_directory%examples\basicmac-otaa" "%option:"=%\BasicMAC\examples\basicmac-otaa"
-   COPY "%source_directory%examples-common-files" "%option:"=%\BasicMAC\examples\basicmac-otaa"
-   COPY "%source_directory%examples\basicmac-abp" "%option:"=%\BasicMAC\examples\basicmac-abp"
-   COPY "%source_directory%examples-common-files" "%option:"=%\BasicMAC\examples\basicmac-abp"
-   COPY "%source_directory%board.h" "%option:"=%\BasicMAC\src\lmic"
-   COPY "%source_directory%hw.h" "%option:"=%\BasicMAC\src\lmic"
+   COPY "%source_directory%library.properties" "%target_directory:"=%\BasicMAC\library.properties"
+   COPY "%source_directory%basicmac.h" "%target_directory:"=%\BasicMAC\src"
+   COPY "%source_directory%..\..\lmic" "%target_directory:"=%\BasicMAC\src\lmic"
+   COPY "%source_directory%hal" "%target_directory:"=%\BasicMAC\src\hal"
+   COPY "%source_directory%..\..\aes" "%target_directory:"=%\BasicMAC\src\aes"
+   COPY "%source_directory%examples\basicmac-otaa" "%target_directory:"=%\BasicMAC\examples\basicmac-otaa"
+   COPY "%source_directory%examples-common-files" "%target_directory:"=%\BasicMAC\examples\basicmac-otaa"
+   COPY "%source_directory%examples\basicmac-abp" "%target_directory:"=%\BasicMAC\examples\basicmac-abp"
+   COPY "%source_directory%examples-common-files" "%target_directory:"=%\BasicMAC\examples\basicmac-abp"
+   COPY "%source_directory%board.h" "%target_directory:"=%\BasicMAC\src\lmic"
+   COPY "%source_directory%hw.h" "%target_directory:"=%\BasicMAC\src\lmic"
    @ECHO off
 GOTO :EOF
