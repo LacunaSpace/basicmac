@@ -110,6 +110,7 @@ const lmic_pinmap lmic_pins = {
     .busy = LMIC_UNUSED_PIN,
     .tcxo = LMIC_UNUSED_PIN,
 };
+<<<<<<< HEAD
 #elif defined(ARDUINO_TTGO_LoRa32_V1)
 #if !defined(BRD_sx1276_radio)
 #error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
@@ -126,6 +127,43 @@ const lmic_pinmap lmic_pins = {
     .busy = LMIC_UNUSED_PIN,
     .tcxo = LMIC_UNUSED_PIN,
 };
+=======
+#elif defined(ARDUINO_TBeam)
+// TTGO T-Beam development board
+// https://github.com/LilyGO/TTGO-T-Beam
+// This board is available with an SX1276 or SX1262 soldered on. The board is
+// otherwise identical and does not have a separate board entry in the
+// Arduino IDE, so decide based on the radio constant which one to use.
+//
+// Uses LoRa SPI bus at 5/19/27
+// This uses LORA_* constants from the board variant file
+#if defined(BRD_sx1276_radio)
+const lmic_pinmap lmic_pins = {
+    .nss = LORA_CS, // 18
+    // RX/TX is controlled through RXTX by the SX1276/8 directly on the HPD13/4A
+    .tx = LMIC_UNUSED_PIN,
+    .rx = LMIC_UNUSED_PIN,
+    .rst = LORA_RST, // 23
+    .dio = {LORA_IO0 /* 26 */ , LORA_IO1 /* 33 */, LORA_IO2 /* 32 */},
+    .busy = LMIC_UNUSED_PIN,
+    .tcxo = LMIC_UNUSED_PIN,
+};
+#elif defined(BRD_sx1262_radio)
+const lmic_pinmap lmic_pins = {
+    .nss = LORA_CS, // 18
+    // TXEN is controlled through DIO2 by the SX1262 (HPD16A) directly
+    .tx = LMIC_CONTROLLED_BY_DIO2,
+    .rx = LMIC_UNUSED_PIN,
+    .rst = LORA_RST, // 23
+    .dio = {LMIC_UNUSED_PIN, LORA_IO1  /* 33 */, LMIC_UNUSED_PIN},
+    .busy = LORA_IO2, // 32
+    // TCXO is controlled through DIO3 by the SX1262 directly
+    .tcxo = LMIC_CONTROLLED_BY_DIO3,
+};
+#else
+#error "Wrong radio defined for this board (fix in BasicMAC target-config.h)"
+#endif
+>>>>>>> 32933affa6cff00cf61ca8ed2898f04c2048b832
 #else
 #error "Unknown board, no standard pimap available. Define your own in the main sketch file."
 #endif
