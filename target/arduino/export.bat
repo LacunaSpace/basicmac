@@ -96,10 +96,7 @@ GOTO :EOF
    COPY "%source_directory%..\..\lmic" "%target_directory:"=%\BasicMAC\src\lmic"
    COPY "%source_directory%hal" "%target_directory:"=%\BasicMAC\src\hal"
    COPY "%source_directory%..\..\aes" "%target_directory:"=%\BasicMAC\src\aes"
-   COPY "%source_directory%examples\basicmac-otaa" "%target_directory:"=%\BasicMAC\examples\basicmac-otaa"
-   COPY "%source_directory%examples-common-files" "%target_directory:"=%\BasicMAC\examples\basicmac-otaa"
-   COPY "%source_directory%examples\basicmac-abp" "%target_directory:"=%\BasicMAC\examples\basicmac-abp"
-   COPY "%source_directory%examples-common-files" "%target_directory:"=%\BasicMAC\examples\basicmac-abp"
+   XCOPY "%source_directory%examples" "%target_directory:"=%\BasicMAC\examples" /E /y
    COPY "%source_directory%board.h" "%target_directory:"=%\BasicMAC\src\lmic"
    COPY "%source_directory%hw.h" "%target_directory:"=%\BasicMAC\src\lmic"
    @ECHO off
