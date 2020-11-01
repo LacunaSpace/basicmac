@@ -33,8 +33,10 @@
 SRC=$(cd "$(dirname "$0")"; pwd)
 
 usage() {
-	echo "$0 [--link] TARGET_DIR"
-	echo "Create an Arduino-compatible library in the given directory, overwriting existing files. If --link is given, creates symbolic links for easy testing."
+	echo "Usage: $0 [--link] TARGET_DIR"
+	echo "Create an Arduino-compatible library in the given directory,"
+	echo "overwriting existing files. If --link is given, creates symbolic"
+	echo "links for easy testing."
 }
 
 
