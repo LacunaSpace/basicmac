@@ -52,7 +52,7 @@ create_links() {
 
 CMD="cp -r -v"
 case "$1" in
-	--help)
+	-h|--help)
 		usage
 		exit 0
 	;;
@@ -60,7 +60,7 @@ case "$1" in
 		CMD="create_links"
 		shift;
 	;;
-	--*)
+	-*)
 		echo "Unknown option: $1" 1>&2
 		exit 1
 	;;
