@@ -123,7 +123,9 @@ not currently tested.
 
 BasicMAC is based on LMIC and largely works in the same way. Sketches
 can likely be largely reused, though some small changes need to be made.
-See for example commit 3ccfb5b for the changes needed to the examples.
+See for example [this commit][migrate-examples] for the changes needed to the examples.
 
 Additionally the pinmap was significantly changed, so look at one of the
 current examples to see how that looks now.
+
+[migrate-examples]: https://github.com/LacunaSpace/basicmac/commit/1505722c912c8cb0cfff2e18b115f9f2c1a62d0f
