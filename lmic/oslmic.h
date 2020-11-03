@@ -369,6 +369,7 @@ void radio_sleep (void);
 void radio_cca (void);
 void radio_cad (void);
 void radio_cw (void);
+void radio_generate_random (u4_t *words, u1_t len);
 
 #ifdef __cplusplus
 } // extern "C"

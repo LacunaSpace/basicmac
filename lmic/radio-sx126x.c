@@ -800,6 +800,11 @@ void radio_init (bool calibrate) {
     hal_enableIRQs();
 }
 
+void radio_generate_random(u4_t *words, u1_t len) {
+    while (len--)
+        *words++ = GetRandom ();
+}
+
 // (run by irqjob)
 bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
     (void)diomask; // unused

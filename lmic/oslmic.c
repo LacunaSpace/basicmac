@@ -18,12 +18,15 @@ static struct {
     } /* anonymous */;
 } OS;
 
+void rng_init (void);
+
 void os_init (void* bootarg) {
     memset(&OS, 0x00, sizeof(OS));
     hal_init(bootarg);
 #ifndef CFG_noradio
     radio_init(false);
 #endif
+    rng_init();
     LMIC_init();
 }
 
@@ -33,21 +36,21 @@ void os_init (void* bootarg) {
 void rng_init (void) {
 #ifdef PERIPH_TRNG
     trng_next(OS.randwrds, 4);
+#elif defined(BRD_sx1261_radio) || defined(BRD_sx1262_radio)
+    radio_generate_random(OS.randwrds, 4);
 #else
     memcpy(OS.randbuf, __TIME__, 8);
     os_getDevEui(OS.randbuf + 8);
 #endif
+    OS.randbuf[0] = 16;
 }
 
 u1_t os_getRndU1 (void) {
     u1_t i = OS.randbuf[0];
-    switch( i ) {
-        case 0:
-            rng_init(); // lazy initialization
-            // fall-thru
-        case 16:
-            os_aes(AES_ENC, OS.randbuf, 16); // encrypt seed with any key
-            i = 0;
+    ASSERT(i != 0);
+    if (i == 16) {
+        os_aes(AES_ENC, OS.randbuf, 16); // encrypt seed with any key
+        i = 0;
     }
     u1_t v = OS.randbuf[i++];
     OS.randbuf[0] = i;
