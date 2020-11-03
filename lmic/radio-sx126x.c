@@ -521,20 +521,6 @@ static void SetCrc16 (uint16_t seed, uint16_t polynomial) {
     WriteRegs(REG_CRCPOLYVALMSB, buf, 2);
 }
 
-static uint32_t GetRandom (void) __attribute__((__unused__)); // Ok if unused
-static uint32_t GetRandom (void) {
-    uint32_t value;
-    // continuous rx
-    SetRx(0xFFFFFF);
-    // wait 1ms
-    hal_waitUntil(os_getTime() + ms2osticks(1));
-    // read random register
-    ReadRegs(REG_RANDOMNUMBERGEN0, (uint8_t*)&value, sizeof(value));
-    // standby
-    SetStandby(STDBY_RC);
-    return value;
-}
-
 void radio_sleep (void) {
     // cache sleep state to avoid unneccessary wakeup (waking up from cold sleep takes about 4ms)
     if (state.sleeping == 0) {
@@ -550,6 +536,24 @@ static void CommonSetup (void) {
         SetDIO2AsRfSwitchCtrl(1);
     if (hal_dio3_controls_tcxo())
         SetDIO3AsTcxoCtrl();
+}
+
+static uint32_t GetRandom (void) __attribute__((__unused__)); // Ok if unused
+static uint32_t GetRandom (void) {
+    uint32_t value;
+
+    // Set up oscillator and rx/tx
+    CommonSetup();
+
+    // continuous rx
+    SetRx(0xFFFFFF);
+    // wait 1ms
+    hal_waitUntil(os_getTime() + ms2osticks(1));
+    // read random register
+    ReadRegs(REG_RANDOMNUMBERGEN0, (uint8_t*)&value, sizeof(value));
+    // standby
+    SetStandby(STDBY_RC);
+    return value;
 }
 
 static void txlora (void) {
