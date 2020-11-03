@@ -85,7 +85,7 @@
 // When this is defined, the standard libc printf function will print to
 // this Stream. You should probably use CFG_DEBUG and debug_printf()
 // instead, though.
-//#define LMIC_PRINTF_FO
+//#define LMIC_PRINTF_TO Serial
 
 // Remove/comment this to enable code related to beacon tracking.
 #define DISABLE_CLASSB
