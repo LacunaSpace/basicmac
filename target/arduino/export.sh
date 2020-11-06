@@ -43,10 +43,10 @@ usage() {
 # This recursively copies $1 (file or directory) into $2 (directory)
 # This is essentially cp --symbolic-link, but POSIX-compatible.
 create_links() {
-	local TARGET=$(cd "$2" && pwd)
-	local SRCDIR=$(cd "$(dirname "$1")" && pwd)
-	local SRCNAME=$(basename "$1")
-	(cd "$SRCDIR" && find "$SRCNAME" -type d -exec mkdir -p "$TARGET/{}" \; -o -exec ln -s -v "$SRCDIR/{}" "$TARGET/{}" \; )
+	LINK_TARGET=$(cd "$2" && pwd)
+	LINK_SRCDIR=$(cd "$(dirname "$1")" && pwd)
+	LINK_SRCNAME=$(basename "$1")
+	(cd "$LINK_SRCDIR" && find "$LINK_SRCNAME" -type d -exec mkdir -p "$LINK_TARGET/{}" \; -o -exec ln -s -v "$LINK_SRCDIR/{}" "$LINK_TARGET/{}" \; )
 }
 
 
