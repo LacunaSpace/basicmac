@@ -55,13 +55,7 @@ jobs:
         ./target/arduino/export.sh BasicMacArduino
 
     - name: Compile all examples
-      # This uses a fork that also works for .c files and runs outside
-      # of docker (for performance, but also inside docker the lacuna
-      # build somehow fails).
-      # TODO: Convert back to the original once merged:
-      # https://github.com/ArminJo/arduino-test-compile/pull/14
-      # https://github.com/ArminJo/arduino-test-compile/pull/16
-      uses: matthijskooijman/arduino-test-compile@extra-flags-for-c-and-S-and-no-docker
+      uses: ArminJo/arduino-test-compile@v3
       with:
         arduino-board-fqbn: ${{ matrix.board }}
         platform-default-url: ${{ env.PLATFORM_DEFAULT_URL }}
@@ -69,8 +63,8 @@ jobs:
         # Normally, all .ino files are treated as separate sketches, but
         # this is just a secondary .ino file that does not need to be
         # separately compiled.
-        examples-exclude: standard-pinmaps
-        examples-build-properties: >
+        sketches-exclude: standard-pinmaps
+        build-properties: >
           {"All": "
             -DBASICMAC_DUMMY_PINMAP
             -D${{matrix.region}}
