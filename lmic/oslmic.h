@@ -192,25 +192,37 @@ u1_t os_getRndU1 (void);
 #error Illegal OSTICKS_PER_SEC - must be in range [10000:64516]. One tick must be 15.5us .. 100us long.
 #endif
 
-typedef s4_t  ostime_t;
-typedef s8_t  osxtime_t;
+typedef u4_t  ostime_t;
+typedef u8_t  osxtime_t;
+// Signed versions, for differences between timestamps that might be negative
+typedef s4_t  ostimediff_t;
+typedef s8_t  osxtimediff_t;
 
-#define OSXTIME_MAX     INT64_MAX
+#define OSXTIME_MAX     UINT64_MAX
 #define OSTIME_MAX_DIFF INT32_MAX
 
 #if !HAS_ostick_conv
+// Note that these use signed multiplication, even though inputs an
+// outputs are unsigned. Doing so allows gcc to ignore overflow (which
+// is undefined for signed multiplication) and optimize multiplication
+// and subsequent division into a single division or even bitshift when
+// a tick is an integer number of microseconds). With unsigned
+// multiplication, gcc *could* realize that extending 32 to 64 bits and
+// then multiplying by a value smaller than 32-bits can also be
+// guaranteed to never overflow, but at least gcc 7, 9 and 10 do not
+// seem to do this.
 #define us2osticks(us)   ((ostime_t)( ((s8_t)(us) * OSTICKS_PER_SEC) / 1000000))
 #define ms2osticks(ms)   ((ostime_t)( ((s8_t)(ms) * OSTICKS_PER_SEC)    / 1000))
 #define sec2osticks(sec) ((ostime_t)( (s8_t)(sec) * OSTICKS_PER_SEC))
-#define osticks2sec(os)  ((s4_t)(((os)               ) / OSTICKS_PER_SEC))
-#define osticks2ms(os)   ((s4_t)(((os)*(s8_t)1000    ) / OSTICKS_PER_SEC))
-#define osticks2us(os)   ((s4_t)(((os)*(s8_t)1000000 ) / OSTICKS_PER_SEC))
+#define osticks2sec(os)  ((u4_t)(((os)               ) / OSTICKS_PER_SEC))
+#define osticks2ms(os)   ((u4_t)(((os)*(s8_t)1000    ) / OSTICKS_PER_SEC))
+#define osticks2us(os)   ((u4_t)(((os)*(s8_t)1000000 ) / OSTICKS_PER_SEC))
 // Special versions
 #define us2osticksCeil(us)  ((ostime_t)( ((s8_t)(us) * OSTICKS_PER_SEC + 999999) / 1000000))
 #define us2osticksRound(us) ((ostime_t)( ((s8_t)(us) * OSTICKS_PER_SEC + 500000) / 1000000))
 #define ms2osticksCeil(ms)  ((ostime_t)( ((s8_t)(ms) * OSTICKS_PER_SEC + 999) / 1000))
 #define ms2osticksRound(ms) ((ostime_t)( ((s8_t)(ms) * OSTICKS_PER_SEC + 500) / 1000))
-#define osticks2secCeil(os) ((s4_t)(((os) + (OSTICKS_PER_SEC - 1)) / OSTICKS_PER_SEC))
+#define osticks2secCeil(os) ((u4_t)(((os) + (OSTICKS_PER_SEC - 1)) / OSTICKS_PER_SEC))
 // Extended versions
 #define us2osxticks(us)   ((osxtime_t)( ((s8_t)(us) * OSTICKS_PER_SEC) / 1000000))
 #define ms2osxticks(ms)   ((osxtime_t)( ((s8_t)(ms) * OSTICKS_PER_SEC)    / 1000))

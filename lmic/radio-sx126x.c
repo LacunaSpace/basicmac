@@ -664,7 +664,7 @@ static void rxfsk (bool rxcontinuous) {
     hal_irqmask_set(HAL_IRQMASK_DIO1);
 
     ostime_t now = os_getTime();
-    if (!rxcontinuous && LMIC.rxtime - now < 0) {
+    if (!rxcontinuous && (ostimediff_t)(LMIC.rxtime - now) < 0) {
         debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
                      (long)(now - LMIC.rxtime), (long)osticks2ms(now - t0), (long)(now - t0));
     }
@@ -712,7 +712,7 @@ static void rxlora (bool rxcontinuous) {
     hal_irqmask_set(HAL_IRQMASK_DIO1);
 
     ostime_t now = os_getTime();
-    if (!rxcontinuous && LMIC.rxtime - now < 0) {
+    if (!rxcontinuous && (ostimediff_t)(LMIC.rxtime - now) < 0) {
         // Print before disabling IRQs, to work around deadlock on some
         // Arduino cores that doe not really support printing without IRQs
         debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
