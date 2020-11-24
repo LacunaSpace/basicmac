@@ -859,7 +859,7 @@ static void rxlorasingle (void) {
     // re-enable interrupts
     hal_enableIRQs();
     // warn about delayed rx
-    if( rxtime - now < 0 ) {
+    if( (ostimediff_t)(rxtime - now) < 0 ) {
         debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
                      (long)(now - rxtime), (long)osticks2ms(now - t0), (long)(now - t0));
     }
@@ -992,7 +992,7 @@ static void rxfsk (bool rxcontinuous) {
         radio_set_irq_timeout(LMIC.rxtime + us2osticks((u4_t)(2*FIFOTHRESH)*8*1000/50));
         // busy wait until exact rx time
         ostime_t now = os_getTime();
-        if (LMIC.rxtime - now < 0) {
+        if ((ostimediff_t)(LMIC.rxtime - now) < 0) {
             debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
                          (long)(now - LMIC.rxtime), (long)osticks2ms(now - t0), (long)(now - t0));
         }

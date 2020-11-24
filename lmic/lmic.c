@@ -604,7 +604,7 @@ static ostime_t dr2hsym (dr_t dr, s1_t num) {
 }
 
 #if !defined(DISABLE_CLASSB)
-static ostime_t calcRxWindow (u1_t secs, dr_t dr) {
+static ostimediff_t calcRxWindow (u1_t secs, dr_t dr) {
     ostime_t rxoff, err;
 
     // assume max wobble for missed bcn periods
@@ -728,7 +728,7 @@ static void rxschedInit (rxsched_t* rxsched) {
 
 static bit_t rxschedNext (rxsched_t* rxsched, ostime_t cando) {
   again:
-    if( rxsched->rxtime - cando >= 0 )
+    if( (ostimediff_t)(rxsched->rxtime - cando) >= 0 )
         return 1;
     u1_t slot;
     if( (slot=rxsched->slot) >= 128 )
@@ -758,7 +758,7 @@ static ostime_t rndDelay (u1_t secSpan) {
 
 static void txDelay (ostime_t reftime, u1_t secSpan) {
     reftime += rndDelay(secSpan);
-    if( LMIC.globalDutyRate == 0  ||  (reftime - LMIC.globalDutyAvail) > 0 ) {
+    if( LMIC.globalDutyRate == 0  || (ostimediff_t)(reftime - LMIC.globalDutyAvail) > 0 ) {
         LMIC.globalDutyAvail = reftime;
         LMIC.opmode |= OP_RNDTX;
     }
@@ -2605,7 +2605,7 @@ static void onBcnScanRx (osjob_t* job) {
         reportEvent(EV_BEACON_FOUND);    // can be disabled in callback
         return;
     }
-    if( (os_getTime() - LMIC.bcninfo.txtime) >= 0 ) {
+    if( (ostimediff_t)(os_getTime() - LMIC.bcninfo.txtime) >= 0 ) {
         LMIC.opmode &= ~(OP_SCAN | OP_TRACK);
         reportEvent(EV_SCAN_TIMEOUT);
         return;
@@ -3020,12 +3020,12 @@ static void engineUpdate (void) {
 #if CFG_simul
         // Simulation is sometimes late - don't die here but keep going.
         // Results in a missed beacon. On the HW this spells a more serious problem.
-        if( (ostime_t)(rxtime-now) < 0 ) {
+        if( (ostimediff_t)(rxtime-now) < 0 ) {
             fprintf(stderr, "ERROR: engineUpdate/OP_TRACK: delta=%d now=0x%X rxtime=0x%X LMIC.bcnRxtime=0x%X RX_RAMPUP=%d\n",
-                    (ostime_t)(rxtime-now),now,rxtime,LMIC.bcnRxtime,RX_RAMPUP);
+                    (ostimediff_t)(rxtime-now),now,rxtime,LMIC.bcnRxtime,RX_RAMPUP);
         }
 #else
-        ASSERT( (ostime_t)(rxtime-now) >= 0 );
+        ASSERT( (ostimediff_t)(rxtime-now) >= 0 );
 #endif
     }
 #endif
@@ -3033,7 +3033,7 @@ static void engineUpdate (void) {
         opmodePoll();
 
     if( (LMIC.opmode & (OP_JOINING|OP_REJOIN|OP_TXDATA)) != 0 ||
-        ((LMIC.opmode & OP_POLL) && now - LMIC.polltime >= LMIC.polltimeout)) {
+        ((LMIC.opmode & OP_POLL) && (ostimediff_t)(now - LMIC.polltime) >= (ostimediff_t)LMIC.polltimeout)) {
         // Need to TX some data...
         // Assuming txChnl points to channel which first becomes available again.
         bit_t jacc = ((LMIC.opmode & (OP_JOINING|OP_REJOIN)) != 0 ? 1 : 0);
@@ -3050,7 +3050,7 @@ static void engineUpdate (void) {
             debug_verbose_printf("Airtime available at %t (previously determined)\r\n", txbeg);
         }
         // Delayed TX or waiting for duty cycle?
-        if( (LMIC.globalDutyRate != 0 || (LMIC.opmode & OP_RNDTX) != 0)  &&  (txbeg - LMIC.globalDutyAvail) < 0 ) {
+        if( (LMIC.globalDutyRate != 0 || (LMIC.opmode & OP_RNDTX) != 0)  &&  (ostimediff_t)(txbeg - LMIC.globalDutyAvail) < 0 ) {
             txbeg = LMIC.globalDutyAvail;
             debug_verbose_printf("Airtime available at %t (global duty limit)\r\n", txbeg);
         }
@@ -3058,7 +3058,7 @@ static void engineUpdate (void) {
         // If we're tracking a beacon...
         // then make sure TX-RX transaction is complete before beacon
         if( (LMIC.opmode & OP_TRACK) != 0 &&
-            txbeg + (jacc ? JOIN_GUARD_osticks : TXRX_GUARD_osticks) - rxtime > 0 ) {
+            (ostimediff_t)(txbeg + (jacc ? JOIN_GUARD_osticks : TXRX_GUARD_osticks) - rxtime) > 0 ) {
 
             debug_verbose_printf("Awaiting beacon before uplink\r\n");
 
@@ -3070,7 +3070,7 @@ static void engineUpdate (void) {
         }
 #endif
         // Earliest possible time vs overhead to setup radio
-        if( txbeg - (now + TX_RAMPUP) <= 0 ) {
+        if( (ostimediff_t)(txbeg - (now + TX_RAMPUP)) <= 0 ) {
         debug_verbose_printf("Ready for uplink\r\n");
             // We could send right now!
             txbeg = now + TX_RAMPUP;
@@ -3150,27 +3150,27 @@ static void engineUpdate (void) {
     if( (LMIC.opmode & OP_PINGINI) != 0 ) {
         // One more RX slot in this beacon period?
         if( rxschedNext(&LMIC.ping, now+RX_RAMPUP) ) {
-            if( txbeg != 0  &&  (txbeg - LMIC.ping.rxtime) < 0 )
+            if( txbeg != 0  &&  (ostimediff_t)(txbeg - LMIC.ping.rxtime) < 0 )
                 goto txdelay;
             LMIC.rxsyms  = LMIC.ping.rxsyms;
             LMIC.rxtime  = LMIC.ping.rxtime;
             LMIC.freq    = LMIC.ping.freq;          // XXX:US like => calc based on beacon time!
             LMIC.rps     = dndr2rps(LMIC.ping.dr);
             LMIC.dataLen = 0;
-            ASSERT(LMIC.rxtime - now+RX_RAMPUP >= 0 );
+            ASSERT((ostimediff_t)(LMIC.rxtime - now+RX_RAMPUP) >= 0 );
             os_setTimedCallback(&LMIC.osjob, LMIC.rxtime - RX_RAMPUP, FUNC_ADDR(startRxPing));
             return;
         }
         // no - just wait for the beacon
     }
 
-    if( txbeg != 0  &&  (txbeg - rxtime) < 0 )
+    if( txbeg != 0  && (ostimediff_t)(txbeg - rxtime) < 0 )
         goto txdelay;
 
     setBcnRxParams();
     LMIC.rxsyms = LMIC.bcnRxsyms;
     LMIC.rxtime = LMIC.bcnRxtime;
-    if( now - rxtime >= 0 ) {
+    if( (ostimediff_t)(now - rxtime) >= 0 ) {
         LMIC.osjob.func = FUNC_ADDR(processBeacon);
         os_radio(RADIO_RX);
         return;

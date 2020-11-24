@@ -75,7 +75,7 @@ osxtime_t os_getXTime () {
 }
 
 osxtime_t os_time2XTime (ostime_t t, osxtime_t context) {
-    return context + ((t - (ostime_t) context));
+    return context + (ostimediff_t)((t - (ostime_t) context));
 }
 
 // unlink job from queue, return 1 if removed
@@ -100,7 +100,7 @@ static int unlinkjob (osjob_t** pnext, osjob_t* job) {
 static void extendedjobcb (osxjob_t* xjob) {
     hal_disableIRQs();
     osxtime_t now = os_getXTime();
-    if (xjob->deadline - now > XJOBTIME_MAX_DIFF) {
+    if ((osxtimediff_t)(xjob->deadline - now) > XJOBTIME_MAX_DIFF) {
         // schedule intermediate callback
         os_setTimedCallbackEx((osjob_t*) xjob, (ostime_t) (now + XJOBTIME_MAX_DIFF), (osjobcb_t) extendedjobcb, OSJOB_FLAG_APPROX);
     } else {
@@ -145,7 +145,7 @@ void os_setTimedCallbackEx (osjob_t* job, ostime_t time, osjobcb_t cb, unsigned 
     ostime_t now = os_getTime();
     if( flags & OSJOB_FLAG_NOW ) {
         time = now;
-    } else if ( time - now <= 0 ) {
+    } else if ( (ostimediff_t)(time - now) <= 0 ) {
         flags |= OSJOB_FLAG_NOW;
     }
     job->deadline = time;
@@ -157,7 +157,7 @@ void os_setTimedCallbackEx (osjob_t* job, ostime_t time, osjobcb_t cb, unsigned 
     }
     // insert into schedule
     for(pnext=&OS.scheduledjobs; *pnext; pnext=&((*pnext)->next)) {
-        if((*pnext)->deadline - time > 0) { // (cmp diff, not abs!)
+        if((ostimediff_t)((*pnext)->deadline - time) > 0) { // (cmp diff, not abs!)
             // enqueue before next element and stop
             job->next = *pnext;
             break;
@@ -197,7 +197,7 @@ void os_runstep (void) {
     if (j) { // run job callback
 #ifdef CFG_warnjobs
         // warn about late execution of precisely timed jobs
-        ostime_t delta = 0;
+        ostimediff_t delta = 0;
         if ( (j->flags & (OSJOB_FLAG_NOW | OSJOB_FLAG_APPROX) ) == 0) {
             delta = os_getTime() - j->deadline;
         }

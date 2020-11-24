@@ -658,7 +658,7 @@ u1_t hal_sleep (u1_t type, u4_t targettime) {
 #ifdef CFG_rtstats
     static ostime_t wakeup;
     ostime_t t1 = xnow;
-    ASSERT((t1 - wakeup) >= 0);
+    ASSERT((ostimediff_t)(t1 - wakeup) >= 0);
     HAL.rtstats.run += (t1 - wakeup);
 #endif
 
@@ -667,7 +667,7 @@ u1_t hal_sleep (u1_t type, u4_t targettime) {
 
 #ifdef CFG_rtstats
     ostime_t t2 = hal_ticks_unsafe();
-    ASSERT((t2 - t1) >= 0);
+    ASSERT((ostimediff_t)(t2 - t1) >= 0);
     HAL.rtstats.sleep[stype] += (t2 - t1);
     wakeup = t2;
 #endif
@@ -680,7 +680,7 @@ u1_t hal_sleep (u1_t type, u4_t targettime) {
 // cannot possibly wait for more than 2 sec when interrupts are disabled because of timer overrun
 void hal_waitUntil (u4_t time) {
     // assure waiting period is in intended range of up to 1 sec (and hasn't expired too long ago)
-    ostime_t diff = time - hal_ticks();
+    ostimediff_t diff = time - hal_ticks();
     ASSERT(diff > -sec2osticks(1) && diff < sec2osticks(1));
     // busy wait until timestamp is reached
     while( ((s4_t) time - (s4_t) hal_ticks()) > 0 );

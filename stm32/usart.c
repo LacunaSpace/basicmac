@@ -185,11 +185,11 @@ int usart_wait_silence (int silence_ticks, int timeout_ticks) {
         if (USARTx->ISR & USART_ISR_BUSY) {
             threshold = os_getTime() + silence_ticks;
         }
-        if ((deadline - os_getTime()) < 0) {
+        if ((ostimediff_t)(deadline - os_getTime()) < 0) {
             retval = -1;
             break;
         }
-        if ((threshold - os_getTime()) < 0) {
+        if ((ostimediff_t)(threshold - os_getTime()) < 0) {
             retval = 0;
             break;
         }

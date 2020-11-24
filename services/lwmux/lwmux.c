@@ -87,7 +87,7 @@ static void bcn_continue (void) {
     ostime_t now = os_getTime();
 again:
     if (state.bcn.missed < state.bcn.missed_max) {
-        if ((state.bcn.nextrx - now) < 0) {
+        if ((ostimediff_t)(state.bcn.nextrx - now) < 0) {
             state.bcn.missed += 1;
             state.bcn.nextrx += state.bcn.interval;
             goto again;
