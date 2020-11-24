@@ -199,7 +199,7 @@ typedef s4_t  ostimediff_t;
 typedef s8_t  osxtimediff_t;
 
 #define OSXTIME_MAX     UINT64_MAX
-#define OSTIME_MAX_DIFF INT32_MAX
+#define OSTIMEDIFF_MAX  INT32_MAX
 
 #if !HAS_ostick_conv
 // Note that these use signed multiplication, even though inputs an
