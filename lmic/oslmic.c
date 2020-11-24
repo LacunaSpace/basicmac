@@ -94,7 +94,7 @@ static int unlinkjob (osjob_t** pnext, osjob_t* job) {
 
 // NOTE: since the job queue might begin with jobs which already have a shortly expired deadline, we cannot use
 //       the maximum span of ostime to schedule the next job (otherwise it would be queued in first)!
-#define XJOBTIME_MAX_DIFF (OSTIME_MAX_DIFF / 2)
+#define XJOBTIME_MAX_DIFF (OSTIMEDIFF_MAX / 2)
 
 // update schedule of extended job
 static void extendedjobcb (osxjob_t* xjob) {
