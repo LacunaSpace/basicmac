@@ -666,7 +666,7 @@ static void rxfsk (bool rxcontinuous) {
     ostime_t now = os_getTime();
     if (!rxcontinuous && LMIC.rxtime - now < 0) {
         debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
-                     now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
+                     (long)(now - LMIC.rxtime), (long)osticks2ms(now - t0), (long)(now - t0));
     }
 
     // now receive (lock interrupts only for final fine tuned rx timing...)
@@ -716,7 +716,7 @@ static void rxlora (bool rxcontinuous) {
         // Print before disabling IRQs, to work around deadlock on some
         // Arduino cores that doe not really support printing without IRQs
         debug_printf("WARNING: rxtime is %ld ticks in the past! (ramp-up time %ld ms / %ld ticks)\r\n",
-                     now - LMIC.rxtime, osticks2ms(now - t0), now - t0);
+                     (long)(now - LMIC.rxtime), (long)osticks2ms(now - t0), (long)now - t0);
     }
 
     // now receive (lock interrupts only for final fine tuned rx timing...)
@@ -844,7 +844,7 @@ bool radio_irq_process (ostime_t irqtime, u1_t diomask) {
 #endif
         } else {
             // unexpected irq
-            debug_printf("UNEXPECTED RADIO IRQ %04x (after %ld ticks, %.1Fms)\r\n", irqflags, irqtime - LMIC.rxtime, osticks2us(irqtime - LMIC.rxtime), 3);
+            debug_printf("UNEXPECTED RADIO IRQ %04x (after %ld ticks, %.1Fms)\r\n", irqflags, (long)(irqtime - LMIC.rxtime), (u4_t)osticks2us(irqtime - LMIC.rxtime), 3);
             TRACE_VAL(irqflags);
             ASSERT(0);
         }
