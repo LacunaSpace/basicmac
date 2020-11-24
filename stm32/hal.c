@@ -683,7 +683,7 @@ void hal_waitUntil (u4_t time) {
     ostimediff_t diff = time - hal_ticks();
     ASSERT(diff > -sec2osticks(1) && diff < sec2osticks(1));
     // busy wait until timestamp is reached
-    while( ((s4_t) time - (s4_t) hal_ticks()) > 0 );
+    while( (s4_t)(time - hal_ticks()) > 0 );
 }
 
 void hal_setMaxSleep (unsigned int level) {
