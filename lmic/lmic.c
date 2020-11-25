@@ -416,17 +416,9 @@ static void adjAvail (avail_t* pavail, osxtime_t base) {
     *pavail = (t > base) ? osticks2secCeil(t - base) : 0;
 }
 
-static void setAvail (avail_t* pavail, osxtime_t t) {
-    osxtime_t base = LMIC.baseAvail;
-    u4_t v;
-    if( base > t ) {
-        t = base; // make sure t is not in the past
-    }
-    if( (v = osticks2secCeil(t - base)) > 0xffff ) {
+static void adjAllAvail() {
         // need to fix up baseAvail
-        base = os_getXTime();
-        v = osticks2secCeil(t - base);
-        ASSERT(v <= 0xffff);
+        osxtime_t base = os_getXTime();
         adjAvail(&LMIC.globalAvail, base);
 #ifdef REG_DYN
         if( !REG_IS_FIX() ) {
@@ -439,6 +431,18 @@ static void setAvail (avail_t* pavail, osxtime_t t) {
         }
 #endif
         LMIC.baseAvail = base;
+}
+
+static void setAvail (avail_t* pavail, osxtime_t t) {
+    osxtime_t base = LMIC.baseAvail;
+    u4_t v;
+    if( base > t ) {
+        t = base; // make sure t is not in the past
+    }
+    if( (v = osticks2secCeil(t - base)) > 0xffff ) {
+        adjAllAvail();
+        v = osticks2secCeil(t - LMIC.baseAvail);
+        ASSERT(v <= 0xffff);
     }
     *pavail = v;
 }
