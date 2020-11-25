@@ -302,8 +302,9 @@ struct lmic_t {
     s1_t        txpow;     // dBm -- needs to be combined with brdTxPowOff
 
     osjob_t     osjob;
+    osjob_t     overflow_job;
 
-    osxtime_t   baseAvail;                      // base time for availability
+    ostime_t    baseAvail;                      // base time for availability
     avail_t     globalAvail;                    // next available DC (global)
     u1_t        noDC;                           // disable all duty cycle
 

@@ -407,18 +407,21 @@ static const region_t REGIONS[REGIONS_COUNT] = {
 #define setBcnRxParams()        _call_rfunc( setBcnRxParams)
 
 
-static osxtime_t getAvail (avail_t avail) {
+static ostime_t getAvail (avail_t avail) {
     return LMIC.baseAvail + sec2osticks(avail);
 }
 
-static void adjAvail (avail_t* pavail, osxtime_t base) {
-    osxtime_t t = getAvail(*pavail);
-    *pavail = (t > base) ? osticks2secCeil(t - base) : 0;
+static void adjAvail (avail_t* pavail, ostime_t base) {
+    ostime_t t = getAvail(*pavail);
+    if ((ostimediff_t)(t - base) <= 0)
+        *pavail = 0;
+    else
+        *pavail = osticks2secCeil(t - base);
 }
 
 static void adjAllAvail() {
         // need to fix up baseAvail
-        osxtime_t base = os_getXTime();
+        ostime_t base = os_getTime();
         adjAvail(&LMIC.globalAvail, base);
 #ifdef REG_DYN
         if( !REG_IS_FIX() ) {
@@ -430,13 +433,14 @@ static void adjAllAvail() {
             }
         }
 #endif
+        debug_verbose_printf("Updated baseAvail from %t to %t\n", LMIC.baseAvail, base);
         LMIC.baseAvail = base;
 }
 
-static void setAvail (avail_t* pavail, osxtime_t t) {
+static void setAvail (avail_t* pavail, ostime_t t) {
     osxtime_t base = LMIC.baseAvail;
     u4_t v;
-    if( base > t ) {
+    if( (ostimediff_t)(t - base) < 0 ) {
         t = base; // make sure t is not in the past
     }
     if( (v = osticks2secCeil(t - base)) > 0xffff ) {
@@ -976,15 +980,9 @@ static void updateTx_dyn (ostime_t txbeg) {
     LMIC.freq  = freq & ~BAND_MASK;
     LMIC.txpow = os_min(LMIC.txPowAdj + REGION.maxEirp, REGION.bands[b].txpow);
     // Update band duty cycle stats
-    osxtime_t xnow = os_getXTime();
-    //XXX:TBD: osxtime_t xtxbeg = os_time2XTime(txbeg, os_getXTime());
-    setAvail(&LMIC.dyn.bandAvail[b], os_time2XTime(txbeg +
-                airtime * REGION.bands[b].txcap,
-                xnow));
+    setAvail(&LMIC.dyn.bandAvail[b], txbeg + airtime * REGION.bands[b].txcap);
     // Update channel duty cycle stats
-    setAvail(&LMIC.dyn.chAvail[LMIC.txChnl], os_time2XTime(txbeg +
-                airtime * REGION.chTxCap,
-                xnow));
+    setAvail(&LMIC.dyn.chAvail[LMIC.txChnl], txbeg + airtime * REGION.chTxCap);
     // Update global duty cycle stats
     if (LMIC.globalDutyRate != 0) {
         LMIC.globalDutyAvail = txbeg + (airtime << LMIC.globalDutyRate);
@@ -1020,8 +1018,7 @@ static u1_t selectRandomChnl (u2_t map, u1_t nbits) {
 // will block while doing LBT
 static ostime_t nextTx_dyn (ostime_t now) {
     drmap_t drbit = 1 << LMIC.datarate;
-    osxtime_t xnow = os_time2XTime(now, os_getXTime());
-    osxtime_t txavail = OSXTIME_MAX;
+    ostime_t txavail = 0;
     u1_t cccnt = 0; // number of candidate channels
     u2_t ccmap = 0; // candidate channel mask
     u2_t pcmap = 0; // probe channel mask
@@ -1033,36 +1030,40 @@ again:
             continue;
         }
         // check channel DC availability
-        osxtime_t avail = getAvail(LMIC.dyn.chAvail[chnl]);
+        ostime_t avail = getAvail(LMIC.dyn.chAvail[chnl]);
         // check band DC availability
-        osxtime_t bavail = getAvail(LMIC.dyn.bandAvail[LMIC.dyn.chUpFreq[chnl] & BAND_MASK]);
-        debug_verbose_printf("Considering channel %u, available at %t (in band %u available at %t)\r\n", chnl, (ostime_t)avail, LMIC.dyn.chUpFreq[chnl] & BAND_MASK, (ostime_t)bavail);
+        ostime_t bavail = getAvail(LMIC.dyn.bandAvail[LMIC.dyn.chUpFreq[chnl] & BAND_MASK]);
+        debug_verbose_printf("Considering channel %u, available at %t (in band %u available at %t)\r\n", chnl, avail, LMIC.dyn.chUpFreq[chnl] & BAND_MASK, bavail);
         if( LMIC.noDC )
             goto addch;
         if (REGION.flags & REG_PSA ) {
             // PSA: channel can be used if band DC (unconditional)
             // or channel DC (PSA) are available
-            if( bavail <= xnow ) {
+            if( (ostimediff_t)(bavail - now) <= 0 ) {
                 avail = bavail;  // just use the channel without probe
             } else {
                 pcmap |= chnlbit; // if PSA DC permits then probe this channel
             }
         } else {
             // do not use channel unless both band+channel DC are available
-            if (bavail > avail) {
+            if ((ostimediff_t)(bavail - avail) > 0) {
                 avail = bavail;
             }
         }
-        if( avail <= xnow ) {
+        if( (ostimediff_t)(avail - now) <= 0 ) {
           addch:
             cccnt += 1;
             ccmap |= chnlbit;
         }
-        if( txavail > avail ) {
+        if( txavail == 0 || (ostimediff_t)(txavail - avail) > 0 ) {
             txavail = avail;
+            // 0 is used as an invalid value, but can actually occur, so
+            // just increment it if it happens.
+            if (txavail == 0)
+                txavail++;
         }
     }
-    if (txavail == OSXTIME_MAX) {
+    if (txavail == 0) {
         debug_verbose_printf("No suitable channel found, trying different datarate\r\n");
         // No suitable channel found - maybe there's no channel which includes current datarate
         syncDatarate();
@@ -1102,11 +1103,11 @@ again:
             cccnt -= 1;
         }
         // Avoid being bombarded...
-        txavail = os_getXTime() + ms2osticks(100);
+        txavail = os_getTime() + ms2osticks(100);
     }
     // Earliest duty cycle expiry or earliest time a channel might be tested again
-    debug_verbose_printf("Channel(s) will become available at %t\r\n", (ostime_t)txavail);
-    return (ostime_t) txavail;
+    debug_verbose_printf("Channel(s) will become available at %t\r\n", txavail);
+    return txavail;
 }
 
 #if !defined(DISABLE_CLASSB)
@@ -1384,7 +1385,7 @@ static void updateTx_fix (ostime_t txbeg) {  //XXX:BUG: this is US915/AU915 cent
 #if CFG_us915
         if( isREGION(US915) ) {
             // US915 FHSS: max 1 transmission every 400 ms
-            setAvail(&LMIC.globalAvail, os_time2XTime(txbeg + ms2osticks(400), os_getXTime()));
+            setAvail(&LMIC.globalAvail, txbeg + ms2osticks(400));
 
             // US915 hybrid mode (i.e. less than 50 channels): limit TX power to 21dBm
             if( LMIC.txpow > 21 && activeFhssChannelCount_fix(LMIC.fix.channelMap) < 50 ) {
@@ -1481,9 +1482,8 @@ static ostime_t nextTx_fix (ostime_t now) {
         }
     }
     LMIC.opmode &= ~OP_NEXTCHNL;  // channel decision is stable
-    osxtime_t xnow = os_time2XTime(now, os_getXTime());
     osxtime_t avail = getAvail(LMIC.globalAvail);
-    return (ostime_t) ((xnow >= avail) ? xnow : avail);
+    return (ostimediff_t)(avail - now) <= 0 ? now : avail;
 }
 
 #endif // REG_FIX
@@ -3245,11 +3245,26 @@ u1_t LMIC_regionCode (u1_t regionIdx) {
     return REGIONS[regionIdx].regcode;
 }
 
+
+// This adjust all long-term timestamps, so they stay valid even when
+// the timer advances (once now advances OSTIMEDIFF_MAX beyond
+// baseAvail, times in the past might wrap around to look timers in the
+// future, so we must update at least once every OSTIMEDIFF_MAX ticks,
+// so do half that to make sure this runs early enough).
+static void preventTimerOverflow (osjob_t* osjob) {
+    adjAllAvail();
+    os_setApproxTimedCallback(osjob, os_getTime() + OSTIMEDIFF_MAX / 2, preventTimerOverflow);
+}
+
 void LMIC_reset_ex (u1_t regionCode) {
     os_radio(RADIO_STOP);
     os_clearCallback(&LMIC.osjob);
+    os_clearCallback(&LMIC.overflow_job);
 
     os_clearMem((u1_t*) &LMIC, sizeof(LMIC));
+
+    // restart overflow job
+    preventTimerOverflow(&LMIC.overflow_job);
 
     // set region
     int regionIdx = LMIC_regionIdx(regionCode);
@@ -3279,13 +3294,13 @@ void LMIC_reset_ex (u1_t regionCode) {
 
     iniRxdErr();
 }
-
 void LMIC_reset (void) {
     LMIC_reset_ex(os_getRegion());
 }
 
 void LMIC_init (void) {
     LMIC.opmode = OP_SHUTDOWN;
+    preventTimerOverflow(&LMIC.overflow_job);
 }
 
 void LMIC_clrTxData (void) {
