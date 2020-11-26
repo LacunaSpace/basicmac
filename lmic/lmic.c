@@ -987,7 +987,7 @@ static void updateTx_dyn (ostime_t txbeg) {
     if (LMIC.globalDutyRate != 0) {
         LMIC.globalDutyAvail = txbeg + (airtime << LMIC.globalDutyRate);
     }
-    debug_verbose_printf("Updating info for TX at %t, airtime will be %t, frequency %.2F. Setting available time for band %u to %u\r\n", txbeg, airtime, LMIC.freq, 6, b, LMIC.dyn.bandAvail[b]);
+    debug_verbose_printf("Updating info for TX at %t, airtime will be %t, frequency %.2F. Setting available time for band %u to %t\r\n", txbeg, airtime, LMIC.freq, 6, b, getAvail(LMIC.dyn.bandAvail[b]));
     if( LMIC.globalDutyRate != 0 )
         debug_verbose_printf("Updating global duty avail to %t\r\n", LMIC.globalDutyAvail);
 }
