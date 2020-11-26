@@ -433,6 +433,7 @@ static void adjAllAvail() {
             }
         }
 #endif
+        debug_verbose_printf("Updated baseAvail from %t to %t\r\n", LMIC.baseAvail, base);
         LMIC.baseAvail = base;
 }
 
