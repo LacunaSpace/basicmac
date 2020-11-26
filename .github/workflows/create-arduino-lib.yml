@@ -1,0 +1,21 @@
+name: Create Arduino Library
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Generate Arduino library
+      run: |
+        # Create two directory levels, so the inner one ends up in the
+        # generated zip
+        mkdir ArduinoLibrary
+        ./target/arduino/export.sh ArduinoLibrary/Basicmac
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ArduinoLibrary
+        path: ArduinoLibrary
