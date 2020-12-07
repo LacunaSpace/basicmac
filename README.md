@@ -88,7 +88,8 @@ it should be in your Arduino sketchbook's `libraries` directly (the path
 shown should work with the default Arduino IDE configuration).
 
 This script was tested on Linux, should work on OSX as well, might work
-on Windows (if you have bash).
+on Windows (if you have bash). For Windows, there is also a batch version of
+the script, which works the same, except `--link` is not supported.
 
 ### Using this repository without Arduino
 
