@@ -346,9 +346,6 @@ void hal_watchcount (int /* cnt */) {
 
 #ifdef CFG_DEBUG
 static void hal_debug_init() {
-    #ifdef LED_BUILTIN
-    pinMode(LED_BUILTIN, OUTPUT);
-    #endif
 }
 
 #if !defined(CFG_DEBUG_STREAM)
@@ -361,6 +358,7 @@ void hal_debug_str (const char* str) {
 
 void hal_debug_led (int val) {
     #ifdef LED_BUILTIN
+    pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, val);
     #endif
 }
